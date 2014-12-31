@@ -42,7 +42,7 @@ class XMLHandler(ContentHandler):
             for atributo in self.attrs[name]:
                 dic_attrs[atributo] = attrs.get(atributo, "")
                 #Guardamos en una lista los diccionarios de atributos
-                self.lista_dic.append(dic_attrs)
+            self.lista_dic.append(dic_attrs)
 
     def get_tags(self):
         """
