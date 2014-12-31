@@ -8,9 +8,47 @@ en UDP simple
 import SocketServer
 import sys
 import time
+import os
+from xml.sax import make_parser
+from xml.sax.handler import ContentHandler
 
-PORT = int(sys.argv[1])
+CONFIG = sys.argv[1]
 dic_clients = {}
+
+
+class XMLHandler(ContentHandler):
+    """
+    Handler de XML
+    """
+    def __init__(self):
+        """
+        Constructor, creamos las variables
+        """
+        self.lista_dic = []
+        self.tags = ['server', 'database', 'log']
+        self.attrs = {
+            'server': ['name', 'ip', 'puerto'],
+            'database': ['path', 'passwdpath'],
+            'log': ['path']
+        }
+
+    def startElement(self, name, attrs):
+        """
+        Función que se llama al abrir una etiqueta
+        """
+        dic_attrs = {}
+        if name in self.tags:
+            dic_attrs['name'] = name
+            for atributo in self.attrs[name]:
+                dic_attrs[atributo] = attrs.get(atributo, "")
+                #Guardamos en una lista los diccionarios de atributos
+                self.lista_dic.append(dic_attrs)
+
+    def get_tags(self):
+        """
+        Función con la que se obtiene la lista de diccionarios de atributos
+        """
+        return self.lista_dic
 
 
 class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
@@ -76,7 +114,17 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
 
 
 if __name__ == "__main__":
+    parser = make_parser()
+    xHandler = XMLHandler()
+    parser.setContentHandler(xHandler)
+    #Comprobamos que el fichero .xml es válido
+    try:
+        parser.parse(open(CONFIG))
+    except:
+        print 'Usage: python proxy_registrar.py config'
+        raise SystemExit
+	    
     # Creamos servidor register y escuchamos
-    serv = SocketServer.UDPServer(("", PORT), SIPRegisterHandler)
-    print "Lanzando servidor register de SIP...\n"
+    serv = SocketServer.UDPServer(("", 2222), SIPRegisterHandler)
+    print "Server Proxy-Registrar listening at port 2222...\n"
     serv.serve_forever()
