@@ -61,7 +61,7 @@ class XMLHandler(ContentHandler):
             for atributo in self.attrs[name]:
                 dic_attrs[atributo] = attrs.get(atributo, "")
                 #Guardamos en una lista los diccionarios de atributos
-                self.lista_dic.append(dic_attrs)
+            self.lista_dic.append(dic_attrs)
 
     def get_tags(self):
         """
@@ -83,9 +83,31 @@ if __name__ == "__main__":
         raise SystemExit
 
     #Obtenemos los datos de la configuracion
-    ip = 'localhost'
-    port = 1111
-    username = 'irene@yo.com'
+    for dicc in xHandler.lista_dic:
+        if dicc['name'] == 'account':
+            username = dicc['username']
+            print 'username ' + username
+            passwd = dicc['passwd']
+            print 'password ' + passwd
+        elif dicc['name'] == 'uaserver':
+            ip_server = dicc['ip']
+            print 'ip_server ' + ip_server
+            port_server = dicc['puerto']
+            print 'puerto_server ' + port_server
+        elif dicc['name'] == 'rtpaudio':
+            port_rtp = dicc['puerto']
+            print 'puerto_rtp ' + port_rtp
+        elif dicc['name'] == 'regproxy':
+            ip_pr = dicc['ip']
+            print 'ip_pr ' + ip_pr
+            port_pr = dicc['puerto']
+            print 'puerto_proxy ' + port_pr
+        elif dicc['name'] == 'log':
+            path_log = dicc['path']
+            print 'log ' + path_log
+        elif dicc['name'] == 'audio':
+            path_audio = dicc['path']
+            print 'audio ' + path_audio
 
     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
