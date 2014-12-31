@@ -7,23 +7,61 @@ Clase (y programa principal) para un servidor de eco en UDP simple
 import SocketServer
 import sys
 import os
-
+from xml.sax import make_parser
+from xml.sax.handler import ContentHandler
 
 try:
-    IP = sys.argv[1]
-    PORT = int(sys.argv[2])
-    CANCION = sys.argv[3]
+    CONFIG = sys.argv[1]
 except IndexError:
-    print 'Usage: python server.py IP port audio_file'
+    print 'Usage1: python uaserver.py config'
     raise SystemExit
 except ValueError:
-    print 'Usage: python server.py IP port audio_file'
+    print 'Usage2: python server.py IP port audio_file'
     raise SystemExit
 
 metodos = ('INVITE', 'BYE', 'ACK')
-aEjecutar = './mp32rtp -i 127.0.0.1 -p 23032 < ' + CANCION
+aEjecutar = './mp32rtp -i 127.0.0.1 -p 23032 < ' + 'cancion.mp3'
 
 
+class XMLHandler(ContentHandler):
+    """
+    Handler de XML
+    """
+
+    def __init__(self):
+        """
+        Constructor, creamos las variables
+        """
+        self.lista_dic = []
+        self.tags = ['account', 'uaserver', 'rtpaudio', 'regproxy', 'log', 'audio']
+        self.attrs = {
+            'account': ['username', 'passwd'],
+            'uaserver': ['ip', 'puerto'],
+            'rtpaudio': ['puerto'],
+            'regproxy': ['ip', 'puerto'],
+            'log': ['path'],
+            'audio': ['path']
+        }
+
+    def startElement(self, name, attrs):
+        """
+        Función que se llama al abrir una etiqueta
+        """
+        dic_attrs = {}
+        if name in self.tags:
+            dic_attrs['name'] = name
+            for atributo in self.attrs[name]:
+                dic_attrs[atributo] = attrs.get(atributo, "")
+                #Guardamos en una lista los diccionarios de atributos
+                self.lista_dic.append(dic_attrs)
+
+    def get_tags(self):
+        """
+        Función con la que se obtiene la lista de diccionarios de atributos
+        """
+        return self.lista_dic
+		
+		
 class EchoHandler(SocketServer.DatagramRequestHandler):
     """
     SIP Server
@@ -72,7 +110,18 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                     print 'Enviamos: SIP/2.0 405 Bad Request\r\n\r\n'
 
 if __name__ == "__main__":
+
+    parser = make_parser()
+    xHandler = XMLHandler()
+    parser.setContentHandler(xHandler)
+    #Comprobamos que el fichero .xml es válido
+    try:
+	    parser.parse(open(CONFIG))
+    except:
+	    print 'Usage3: python uaserver.py config'
+	    raise SystemExit
+	    
     # Creamos servidor de eco y escuchamos
-    serv = SocketServer.UDPServer(("", PORT), EchoHandler)
+    serv = SocketServer.UDPServer(("", 1111), EchoHandler)
     print 'Listening...'
     serv.serve_forever()
