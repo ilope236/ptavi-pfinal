@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<account username="irene@yo.com" password=""/>
+	<uaserver ip="127.0.0.1" puerto="1111"/>
+	<rtpaudio puerto="23032"/>
+	<regproxy ip="127.0.0.1" puerto="3333"/>
+	<log path="log_ua1.txt">
+	<audio path="cancion.mp3">
+</config>
