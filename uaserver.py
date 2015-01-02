@@ -15,9 +15,6 @@ try:
 except IndexError:
     print 'Usage1: python uaserver.py config'
     raise SystemExit
-except ValueError:
-    print 'Usage2: python server.py IP port audio_file'
-    raise SystemExit
 
 metodos = ('INVITE', 'BYE', 'ACK')
 aEjecutar = './mp32rtp -i 127.0.0.1 -p 23032 < ' + 'cancion.mp3'
@@ -49,7 +46,7 @@ class XMLHandler(ContentHandler):
         """
         dic_attrs = {}
         if name in self.tags:
-            dic_attrs['name'] = name
+            dic_attrs['tag'] = name
             for atributo in self.attrs[name]:
                 dic_attrs[atributo] = attrs.get(atributo, "")
                 #Guardamos en una lista los diccionarios de atributos
@@ -118,37 +115,37 @@ if __name__ == "__main__":
     try:
 	    parser.parse(open(CONFIG))
     except:
-	    print 'Usage3: python uaserver.py config'
+	    print 'Usage2: python uaserver.py config'
 	    raise SystemExit
 	
 	#Obtenemos los datos de la configuracion
     for dicc in xHandler.lista_dic:
-        if dicc['name'] == 'account':
+        if dicc['tag'] == 'account':
             username = dicc['username']
-            print 'username ' + username
+            print 'username => ' + username
             passwd = dicc['passwd']
-            print 'password ' + passwd
-        elif dicc['name'] == 'uaserver':
+            print 'password => ' + passwd
+        elif dicc['tag'] == 'uaserver':
             ip_server = dicc['ip']
-            print 'ip_server ' + ip_server
-            port_server = dicc['puerto']
-            print 'puerto_server ' + port_server
-        elif dicc['name'] == 'rtpaudio':
-            port_rtp = dicc['puerto']
-            print 'puerto_rtp ' + port_rtp
-        elif dicc['name'] == 'regproxy':
+            print 'ip_server => ' + ip_server
+            port_server = int(dicc['puerto'])
+            print 'puerto_server => ' + str(port_server)
+        elif dicc['tag'] == 'rtpaudio':
+            port_rtp = int(dicc['puerto'])
+            print 'puerto_rtp => ' + str(port_rtp)
+        elif dicc['tag'] == 'regproxy':
             ip_pr = dicc['ip']
-            print 'ip_pr ' + ip_pr
-            port_pr = dicc['puerto']
-            print 'puerto_proxy ' + port_pr
-        elif dicc['name'] == 'log':
+            print 'ip_pr => ' + ip_pr
+            port_pr = int(dicc['puerto'])
+            print 'puerto_proxy => ' + str(port_pr)
+        elif dicc['tag'] == 'log':
             path_log = dicc['path']
-            print 'log ' + path_log
-        elif dicc['name'] == 'audio':
+            print 'log => ' + path_log
+        elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
-            print 'audio ' + path_audio
+            print 'audio => ' + path_audio
 	    
     # Creamos servidor de eco y escuchamos
-    serv = SocketServer.UDPServer(("", 1111), EchoHandler)
+    serv = SocketServer.UDPServer(("", port_server), EchoHandler)
     print 'Listening...'
     serv.serve_forever()
