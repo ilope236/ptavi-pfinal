@@ -17,19 +17,24 @@ from xml.sax.handler import ContentHandler
 metodos = ('INVITE', 'BYE', 'REGISTER')
 
 try:
-	CONFIG = sys.argv[1]
-	METODO = sys.argv[2]
-	OPCION = sys.argv[3]
-	if METODO not in metodos:
-		print 'Usage: python uaclient.py config method option'
-		raise SystemExit
+    CONFIG = sys.argv[1]
+    METODO = sys.argv[2]
+    if METODO not in metodos:
+        print 'Usage: python uaclient.py config method option'
+        raise SystemExit
+    elif METODO == 'REGISTER':
+        OPCION = int(sys.argv[3])
+    else:
+        OPCION = sys.argv[3]
+        if OPCION[-4:] != '.com' or '@' not in OPCION:
+            print 'Usage1: python uaclient.py config method option'
+            raise SystemExit
 except IndexError:
-	print 'Usage1: python uaclient.py config method option'
-	raise SystemExit
-except ValueError:
 	print 'Usage2: python uaclient.py config method option'
 	raise SystemExit
-
+except ValueError:
+	print 'Usage3: python uaclient.py config method option'
+	raise SystemExit
 
 class XMLHandler(ContentHandler):
     """
@@ -57,7 +62,7 @@ class XMLHandler(ContentHandler):
         """
         dic_attrs = {}
         if name in self.tags:
-            dic_attrs['name'] = name
+            dic_attrs['tag'] = name
             for atributo in self.attrs[name]:
                 dic_attrs[atributo] = attrs.get(atributo, "")
                 #Guardamos en una lista los diccionarios de atributos
@@ -79,47 +84,47 @@ if __name__ == "__main__":
     try:
         parser.parse(open(CONFIG))
     except:
-        print 'Usage3: python uaclient.py config method option'
+        print 'Usage4: python uaclient.py config method option'
         raise SystemExit
 
     #Obtenemos los datos de la configuracion
     for dicc in xHandler.lista_dic:
-        if dicc['name'] == 'account':
+        if dicc['tag'] == 'account':
             username = dicc['username']
-            print 'username ' + username
+            print 'username => ' + username
             passwd = dicc['passwd']
-            print 'password ' + passwd
-        elif dicc['name'] == 'uaserver':
+            print 'password => ' + passwd
+        elif dicc['tag'] == 'uaserver':
             ip_server = dicc['ip']
-            print 'ip_server ' + ip_server
-            port_server = dicc['puerto']
-            print 'puerto_server ' + port_server
-        elif dicc['name'] == 'rtpaudio':
-            port_rtp = dicc['puerto']
-            print 'puerto_rtp ' + port_rtp
-        elif dicc['name'] == 'regproxy':
+            print 'ip_server => ' + ip_server
+            port_server = int(dicc['puerto'])
+            print 'puerto_server => ' + str(port_server)
+        elif dicc['tag'] == 'rtpaudio':
+            port_rtp = int(dicc['puerto'])
+            print 'puerto_rtp => ' + str(port_rtp)
+        elif dicc['tag'] == 'regproxy':
             ip_pr = dicc['ip']
-            print 'ip_pr ' + ip_pr
-            port_pr = dicc['puerto']
-            print 'puerto_proxy ' + port_pr
-        elif dicc['name'] == 'log':
+            print 'ip_pr => ' + ip_pr
+            port_pr = int(dicc['puerto'])
+            print 'puerto_proxy => ' + str(port_pr)
+        elif dicc['tag'] == 'log':
             path_log = dicc['path']
-            print 'log ' + path_log
-        elif dicc['name'] == 'audio':
+            print 'log => ' + path_log
+        elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
-            print 'audio ' + path_audio
+            print 'audio => ' + path_audio
 
     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    my_socket.connect((ip, port))
+    my_socket.connect((ip_pr, port_pr))
 
     #Comprobamos el metodo para crear la peticion
     if METODO == 'REGISTER':
 
         #Creamos la peticion REGISTER
-        peticion = METODO + ' sip:' + username + ':' + str(port) + ' SIP/2.0\r\n'
-        cabecera = 'Expires: ' + OPCION + '\r\n\r\n'
+        peticion = METODO + ' sip:' + username + ':' + str(port_pr) + ' SIP/2.0\r\n'
+        cabecera = 'Expires: ' + str(OPCION) + '\r\n\r\n'
         peticion = peticion + cabecera
     '''	
     elif METODO == INVITE:
@@ -143,7 +148,7 @@ if __name__ == "__main__":
     try:
         data = my_socket.recv(1024)
     except socket.error:
-        print 'Error: No server listening at ' + ip + ' port ' + str(port)
+        print 'Error: No server listening at ' + ip_pr + ' port ' + str(port_pr)
         raise SystemExit
 
     print 'Recibido -- ', data
