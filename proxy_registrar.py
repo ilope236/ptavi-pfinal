@@ -8,11 +8,10 @@ en UDP simple
 import SocketServer
 import sys
 import time
+import socket
 import os
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
-
-dic_clients = {}
 
 #Comprobamos errores en los datos
 
@@ -22,10 +21,12 @@ except IndexError:
 	print 'Usage1: python proxy_registrar.py config'
 	raise SystemExit
 
+metodos = ('REGISTER', 'INVITE', 'BYE', 'ACK')
+dic_clients = {}
 
-class XMLHandler(ContentHandler):
+class XMLHandlerPR(ContentHandler):
     """
-    Handler de XML
+    Handler de XML de Servidor Registar-Proxy
     """
     def __init__(self):
         """
@@ -60,7 +61,7 @@ class XMLHandler(ContentHandler):
 
 class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
     """
-    SIP server register class
+    SIP server register and proxy class
     """
     def handle(self):
         # Escribe dirección y puerto del cliente (de tupla client_address)
@@ -71,31 +72,88 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
             if not line:
                 break
             print "El cliente nos manda: " + line
-            #Cogemos los datos del cliente
-            user = line.split()[1][4:].split(':')[0]
-            ip = self.client_address[0]
-            port = line.split()[1][4:].split(':')[1]
-            metodo = line.split('\r\n')[0][:8]
-            exp = int(line.split('\r\n')[1][8:])
-            if metodo == 'REGISTER':
-                self.buscar_clientes()
-                if exp == 0:
-                    #Borramos al cliente del diccionario
-                    if user in dic_clients:
-                        del dic_clients[user]
-                        print "Borramos a :" + user
-                else:
-                    formato = '%Y-%m-%d %H:%M:%S'
-                    date = time.strftime(formato, time.gmtime(time.time()))
-                    hora_exp = time.time() + exp
-                    expires = time.strftime(formato, time.gmtime(hora_exp))
-                    print "Guardamos user:" + user + " IP:" + ip + ' Port:' + str(port) + \
-                          ' Date:' + str(date) + ' Exp:' + str(expires) + '\n'
-                    dic_clients[user] = [ip, port, date, expires]
-                self.register2file()
-                self.wfile.write("SIP/2.0 200 OK\r\n\r\n")
+            
+            peticion = line.split()
+            metodo = peticion[0]
+            #Es un metodo válido?
+            if metodo not in metodos:
+            
+                self.wfile.write('SIP/2.0 400 Method Not Allowed\r\n\r\n')
+                print 'Enviamos: SIP/2.0 400 Method Not Allowed\r\n\r\n'
+                
             else:
-                self.wfile.write("SIP/2.0 400 Bad Request\r\n\r\n")
+                #La peticion sigue el estandar SIP?
+                sip = peticion[1][:4]
+                version = peticion[2]
+                user = peticion[1][4:]
+                if sip == 'sip:' and '@' in user and version == 'SIP/2.0':
+
+                    ip = self.client_address[0]
+                
+                    if metodo == 'REGISTER':
+                        port = user.split(':')[1]
+                        user = user.split(':')[0]
+                        exp = int(peticion[4])
+
+                        self.buscar_clientes()
+                        if exp == 0:
+                            #Borramos al cliente del diccionario
+                            if user in dic_clients:
+                                del dic_clients[user]
+                                print "Borramos a :" + user
+                        else:
+                            formato = '%Y-%m-%d %H:%M:%S'
+                            date = time.strftime(formato, time.gmtime(time.time()))
+                            hora_exp = time.time() + exp
+                            expires = time.strftime(formato, time.gmtime(hora_exp))
+                            print "Guardamos user:" + user + " IP:" + ip + ' Port:' + str(port) + \
+                                  ' Date:' + str(date) + ' Exp:' + str(expires) + '\n'
+                            dic_clients[user] = [ip, port, date, expires]
+                        self.register2file()
+                        self.wfile.write('SIP/2.0 200 OK\r\n\r\n')
+                        
+                    elif metodo == 'INVITE':
+                        
+                        #Guardamos los datos del sdp
+                        peticion = line.split('\r\n\r\n')
+                        sdp = peticion[1].split('\r\n')
+                        dic_sdp = {}
+                        for parametro in sdp:
+                            key = parametro.split('=')[0]
+                            dic_sdp[key] = parametro.split('=')[1]
+                          
+                        #Buscamos si el destinatario esta registrado
+                        encontrado = False
+                        for client in dic_clients.keys():
+                        
+                            if client == user:
+                            
+                                encontrado = True
+                                #Reenviamos en mensaje
+                                ip_receptor = dic_clients[client][0]
+                                port_receptor = int(dic_clients[client][1])
+                                my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                                my_socket.connect((ip_receptor, port_receptor))
+                                print '\r\nReenviamos:\r\n' + line
+                                my_socket.send(line)
+                                
+                                #Esperamos la respuesta
+                                try:
+                                    data = my_socket.recv(1024)
+                                except socket.error:
+                                    print 'Error: No server listening at ' + ip_receptor + ' port ' + str(port_receptor)
+                                    raise SystemExit
+                                    
+                                print 'Recibimos: ' + data 
+                        if encontrado == False:
+                            self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
+                            print 'Enviamos: SIP/2.0 404 User Not Found\r\n\r\n'
+                            
+                else:
+                    self.wfile.write('SIP/2.0 400 Bad Request\r\n\r\n')
+                    print 'Enviamos: SIP/2.0 400 Bad Request\r\n\r\n'
+                    
             print "DICCIONARIO CLIENTES:", dic_clients
             print
 
@@ -118,7 +176,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
         Buscamos si han caducado los clientes y borrarlos
         """
         for key in dic_clients.keys():
-            expires = dic_clients[key][1]
+            expires = dic_clients[key][3]
             hora = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))
             if expires <= hora:
                 del dic_clients[key]
@@ -127,7 +185,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
 
 if __name__ == "__main__":
     parser = make_parser()
-    xHandler = XMLHandler()
+    xHandler = XMLHandlerPR()
     parser.setContentHandler(xHandler)
     #Comprobamos que el fichero .xml es válido
     try:
@@ -137,25 +195,18 @@ if __name__ == "__main__":
         raise SystemExit
         
 	#Obtenemos los datos de la configuracion
-    print 'DATOS:'
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'server':
             name = dicc['name']
-            print 'name => ' + name
             ip_pr = dicc['ip']
             if ip_pr == "":
                 ip_pr = "127.0.0.1"
-            print 'ip_pr => ' + ip_pr
             port_pr = int(dicc['puerto'])
-            print 'port_pr => ' + str(port_pr)
         elif dicc['tag'] == 'database':
             data_path = dicc['path']
-            print 'data_path => ' + data_path
             passwdpath = dicc['passwdpath']
-            print 'passwdpath => ' + passwdpath
         elif dicc['tag'] == 'log':
             path_log = dicc['path']
-            print 'log => ' + path_log + '\n'
               
     # Creamos servidor register y escuchamos
     serv = SocketServer.UDPServer(("", port_pr), SIPRegisterHandler)
