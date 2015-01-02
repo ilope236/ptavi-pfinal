@@ -36,9 +36,9 @@ except ValueError:
 	print 'Usage3: python uaclient.py config method option'
 	raise SystemExit
 
-class XMLHandler(ContentHandler):
+class XMLHandlerUA(ContentHandler):
     """
-    Handler de XML
+    Handler de XML de los User Agent
     """
 
     def __init__(self):
@@ -78,7 +78,7 @@ class XMLHandler(ContentHandler):
 if __name__ == "__main__":
 
     parser = make_parser()
-    xHandler = XMLHandler()
+    xHandler = XMLHandlerUA()
     parser.setContentHandler(xHandler)
     #Comprobamos que el fichero .xml es válido
     try:
@@ -91,28 +91,21 @@ if __name__ == "__main__":
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'account':
             username = dicc['username']
-            print 'username => ' + username
             passwd = dicc['passwd']
-            print 'password => ' + passwd
         elif dicc['tag'] == 'uaserver':
             ip_server = dicc['ip']
-            print 'ip_server => ' + ip_server
+            if ip_server == "":
+                ip_server = '127.0.0.1'
             port_server = int(dicc['puerto'])
-            print 'puerto_server => ' + str(port_server)
         elif dicc['tag'] == 'rtpaudio':
             port_rtp = int(dicc['puerto'])
-            print 'puerto_rtp => ' + str(port_rtp)
         elif dicc['tag'] == 'regproxy':
             ip_pr = dicc['ip']
-            print 'ip_pr => ' + ip_pr
             port_pr = int(dicc['puerto'])
-            print 'puerto_proxy => ' + str(port_pr)
         elif dicc['tag'] == 'log':
             path_log = dicc['path']
-            print 'log => ' + path_log
         elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
-            print 'audio => ' + path_audio
 
     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -123,25 +116,22 @@ if __name__ == "__main__":
     if METODO == 'REGISTER':
 
         #Creamos la peticion REGISTER
-        peticion = METODO + ' sip:' + username + ':' + str(port_pr) + ' SIP/2.0\r\n'
+        peticion = METODO + ' sip:' + username + ':' + str(port_server) + ' SIP/2.0\r\n'
         cabecera = 'Expires: ' + str(OPCION) + '\r\n\r\n'
         peticion = peticion + cabecera
-    '''	
-    elif METODO == INVITE:
+    
+    elif METODO == 'INVITE':
+        
+        #Creamos la peticion INVITE
+        peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
+        cabecera = 'Content-Type: application/sdp\r\n\r\n'
+        sdp = 'v=0\r\n' + 'o=' + username + ' ' + ip_server + '\r\n' \
+               + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + str(port_rtp) + ' RTP' 
+        peticion = peticion + cabecera + sdp
 
-    elif METODO == BYE
-    '''
-    #def enviar_peticion(metodo):
-        #"""
-        #Función que crea las peticiones y las envía
-        #"""
-        #peticion = metodo + ' sip:' + USER + '@' + IP + ' SIP/2.0\r\n\r\n'
-        #print "Enviando: " + peticion
-        #my_socket.send(peticion)
+    #elif METODO == BYE
 
-    # Enviamos la peticion
-    #enviar_peticion(METODO)
-    print "Enviando: " + peticion
+    print "\r\nEnviando:\r\n" + peticion
     my_socket.send(peticion)
 
     #Comprobamos que se escucha en el servidor
@@ -151,7 +141,7 @@ if __name__ == "__main__":
         print 'Error: No server listening at ' + ip_pr + ' port ' + str(port_pr)
         raise SystemExit
 
-    print 'Recibido -- ', data
+    print '\r\nRecibido:\r\n', data
 
     data = data.split('\r\n\r\n')
 
@@ -160,7 +150,11 @@ if __name__ == "__main__":
         if data[1] == 'SIP/2.0 180 Ringing':
 	        if data[2] == 'SIP/2.0 200 OK':
 		        #Enviamos ACK
-		        enviar_peticion('ACK')
+		        ack = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
+                print "\r\nEnviando:\r\n" + ack
+                my_socket.send(ack)
+                
+                #Enviamos RTP
 
     # Cerramos todo
 
