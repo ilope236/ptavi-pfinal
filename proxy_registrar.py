@@ -12,8 +12,15 @@ import os
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
-CONFIG = sys.argv[1]
 dic_clients = {}
+
+#Comprobamos errores en los datos
+
+try:
+	CONFIG = sys.argv[1]
+except IndexError:
+	print 'Usage1: python proxy_registrar.py config'
+	raise SystemExit
 
 
 class XMLHandler(ContentHandler):
@@ -38,7 +45,7 @@ class XMLHandler(ContentHandler):
         """
         dic_attrs = {}
         if name in self.tags:
-            dic_attrs['name'] = name
+            dic_attrs['tag'] = name
             for atributo in self.attrs[name]:
                 dic_attrs[atributo] = attrs.get(atributo, "")
                 #Guardamos en una lista los diccionarios de atributos
@@ -123,8 +130,27 @@ if __name__ == "__main__":
     except:
         print 'Usage: python proxy_registrar.py config'
         raise SystemExit
-	    
+        
+	#Obtenemos los datos de la configuracion
+	
+    for dicc in xHandler.lista_dic:
+        if dicc['tag'] == 'server':
+            name = dicc['name']
+            print 'name => ' + name
+            ip_pr = dicc['ip']
+            print 'ip_pr => ' + ip_pr
+            port_pr = dicc['puerto']
+            print 'port_pr => ' + port_pr
+        elif dicc['tag'] == 'database':
+            data_path = dicc['path']
+            print 'data_path => ' + data_path
+            passwdpath = dicc['passwdpath']
+            print 'passwdpath => ' + passwdpath
+        elif dicc['tag'] == 'log':
+            path_log = dicc['path']
+            print 'log => ' + path_log
+              
     # Creamos servidor register y escuchamos
     serv = SocketServer.UDPServer(("", 2222), SIPRegisterHandler)
-    print "Server Proxy-Registrar listening at port 2222...\n"
+    print 'Server ' + name + ' listening at port ' + str(port_pr) + '...\n'
     serv.serve_forever()
