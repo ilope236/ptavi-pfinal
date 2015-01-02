@@ -95,7 +95,6 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                         for parametro in sdp:
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
-
                         self.wfile.write('SIP/2.0 100 Trying\r\n\r\n'
                                          + 'SIP/2.0 180 Ringing\r\n\r\n'
                                          + 'SIP/2.0 200 OK\r\n\r\n')
@@ -107,7 +106,11 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                         self.wfile.write('SIP/2.0 200 OK\r\n\r\n')
                         print 'Enviamos: SIP/2.0 200 OK\r\n\r\n'
                     elif metodo == 'ACK':
-                        
+                        ip_receptor = dic_sdp['o'].split()[1]
+                        port_rtp = dic_sdp['m'].split()[1]
+                        print 'IP_RTP + PORT_RTP :', ip_receptor, port_rtp
+                        aEjecutar = './mp32rtp -i ' + ip_receptor + ' -p ' + str(port_rtp)
+                        aEjecutar += ' < ' + path_audio
                         print 'Vamos a ejecutar', aEjecutar
                         os.system(aEjecutar)
                         print 'Ha terminado la cancion\r\n'
