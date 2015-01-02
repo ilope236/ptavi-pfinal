@@ -72,8 +72,9 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                 break
             print "El cliente nos manda: " + line
             #Cogemos los datos del cliente
-            user = line.split()[1][4:]
+            user = line.split()[1][4:].split(':')[0]
             ip = self.client_address[0]
+            port = line.split()[1][4:].split(':')[1]
             metodo = line.split('\r\n')[0][:8]
             exp = int(line.split('\r\n')[1][8:])
             if metodo == 'REGISTER':
@@ -84,11 +85,13 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                         del dic_clients[user]
                         print "Borramos a :" + user
                 else:
-                    hora_exp = time.time() + exp
                     formato = '%Y-%m-%d %H:%M:%S'
+                    date = time.strftime(formato, time.gmtime(time.time()))
+                    hora_exp = time.time() + exp
                     expires = time.strftime(formato, time.gmtime(hora_exp))
-                    print "Guardamos user: " + user + " y la IP: " + ip + '\n'
-                    dic_clients[user] = [ip, expires]
+                    print "Guardamos user:" + user + " IP:" + ip + ' Port:' + str(port) + \
+                          ' Date:' + str(date) + ' Exp:' + str(expires) + '\n'
+                    dic_clients[user] = [ip, port, date, expires]
                 self.register2file()
                 self.wfile.write("SIP/2.0 200 OK\r\n\r\n")
             else:
@@ -100,12 +103,14 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
         """
         Registramos a los clientes en un fichero:
         """
-        fich = open('registered', 'w')
-        fich.write('User' + '\t' + 'IP' + '\t' + 'Expires' + '\n')
+        fich = open('registered.txt', 'w')
+        fich.write('User\tIP\tPuerto\tResgistro\tExpires\n')
         for key in dic_clients.keys():
             ip = dic_clients[key][0]
-            expire = str(dic_clients[key][1])
-            fich.write(key + '\t' + ip + '\t' + expire + '\n')
+            port = str(dic_clients[key][1])
+            date = dic_clients[key][2]
+            expire = str(dic_clients[key][3])
+            fich.write(key + '\t' + ip + '\t' + port + '\t' + date + '\t' + expire + '\n')
         fich.close()
 
     def buscar_clientes(self):
@@ -132,15 +137,17 @@ if __name__ == "__main__":
         raise SystemExit
         
 	#Obtenemos los datos de la configuracion
-	
+    print 'DATOS:'
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'server':
             name = dicc['name']
             print 'name => ' + name
             ip_pr = dicc['ip']
+            if ip_pr == "":
+                ip_pr = "127.0.0.1"
             print 'ip_pr => ' + ip_pr
-            port_pr = dicc['puerto']
-            print 'port_pr => ' + port_pr
+            port_pr = int(dicc['puerto'])
+            print 'port_pr => ' + str(port_pr)
         elif dicc['tag'] == 'database':
             data_path = dicc['path']
             print 'data_path => ' + data_path
@@ -148,9 +155,9 @@ if __name__ == "__main__":
             print 'passwdpath => ' + passwdpath
         elif dicc['tag'] == 'log':
             path_log = dicc['path']
-            print 'log => ' + path_log
+            print 'log => ' + path_log + '\n'
               
     # Creamos servidor register y escuchamos
-    serv = SocketServer.UDPServer(("", 2222), SIPRegisterHandler)
+    serv = SocketServer.UDPServer(("", port_pr), SIPRegisterHandler)
     print 'Server ' + name + ' listening at port ' + str(port_pr) + '...\n'
     serv.serve_forever()
