@@ -65,7 +65,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
     """
     def handle(self):
         # Escribe dirección y puerto del cliente (de tupla client_address)
-        print self.client_address
+        print 'DATOS CLIENTE: ', self.client_address
         while 1:
             # Leyendo línea a línea lo que nos envía el cliente
             line = self.rfile.read()
@@ -75,7 +75,8 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
             
             peticion = line.split()
             metodo = peticion[0]
-            encontrado = False
+            find_emisor = False
+            find_recep = False
             #Es un metodo válido?
             if metodo not in metodos:
             
@@ -95,14 +96,14 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                     if metodo == 'REGISTER':
                     
                         port = user.split(':')[1]
-                        user = user.split(':')[0]
+                        emisor = user.split(':')[0]
                         exp = int(peticion[4])
 
                         if exp == 0:
                             #Borramos al cliente del diccionario
-                            if user in dic_clients:
-                                del dic_clients[user]
-                                print "Borramos a :" + user
+                            if emisor in dic_clients:
+                                del dic_clients[emisor]
+                                print "Borramos a :" + emisor
                         else:
                             formato = '%Y-%m-%d %H:%M:%S'
                             date = time.strftime(formato, time.gmtime(time.time()))
@@ -110,7 +111,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             expires = time.strftime(formato, time.gmtime(hora_exp))
                             print "Guardamos user:" + user + " IP:" + ip + ' Port:' + str(port) + \
                                   ' Date:' + str(date) + ' Exp:' + str(expires) + '\n'
-                            dic_clients[user] = [ip, port, date, expires]
+                            dic_clients[emisor] = [ip, port, date, expires]
                             
                         self.register2file()
                         self.wfile.write('SIP/2.0 200 OK\r\n\r\n')
@@ -125,13 +126,19 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                         for parametro in sdp:
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
-                          
+                            
+                        #Buscamos si quien nos envia el mensaje esta registrado
+                        emisor = dic_sdp['o'].split()[0]
+                        for client in dic_clients.keys():
+                            if client == emisor:
+                                find_emisor = True
+                            
                         #Buscamos si el destinatario esta registrado
                         for client in dic_clients.keys():
                         
                             if client == user:
                             
-                                encontrado = True
+                                find_recep = True
                                 #Reenviamos el mensaje a receptor
                                 ip_receptor = dic_clients[client][0]
                                 port_receptor = int(dic_clients[client][1])
@@ -154,7 +161,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 self.wfile.write(data)
                                 print '\r\nReenviamos:\r\n' + data
 
-                        if encontrado == False:
+                        if find_emisor == False or find_recep == False:
                             self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
                             print 'Enviamos: SIP/2.0 404 User Not Found\r\n\r\n'
                             
