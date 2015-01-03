@@ -124,12 +124,15 @@ if __name__ == "__main__":
         
         #Creamos la peticion INVITE
         peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
-        cabecera = 'Content-Type: application/sdp\r\n\r\n'
+        CABECERA = 'Content-Type: application/sdp\r\n\r\n'
         sdp = 'v=0\r\n' + 'o=' + username + ' ' + ip_server + '\r\n' \
                + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + str(port_rtp) + ' RTP' 
-        peticion = peticion + cabecera + sdp
+        peticion = peticion + CABECERA + sdp
 
-    #elif METODO == BYE
+    elif METODO == 'BYE':
+    
+        #Creamos la petición BYE
+        peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
 
     print "\r\nEnviando:\r\n" + peticion
     my_socket.send(peticion)
@@ -144,18 +147,19 @@ if __name__ == "__main__":
     print '\r\nRecibido:\r\n', data
 
     data = data.split('\r\n\r\n')
-
     #Comprobamos que han llegado todos los mensajes
     if data[0] == 'SIP/2.0 100 Trying':
         if data[1] == 'SIP/2.0 180 Ringing':
-	        if data[2] == 'SIP/2.0 200 OK':
-		        #Enviamos ACK
-		        ack = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
-                print "\r\nEnviando:\r\n" + ack
+            if data[2] == 'SIP/2.0 200 OK\r\n':
+                #Enviamos ACK
+                ack = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
+                print '\r\nEnviando:\r\n' , ack
                 my_socket.send(ack)
-                
-                #Enviamos RTP
 
+                #Guardamos los datos de sdp del 200 OK
+
+                #Enviamos RTP
+                
     # Cerramos todo
 
     my_socket.close()
