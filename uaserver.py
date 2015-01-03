@@ -7,13 +7,16 @@ Clase (y programa principal) para un servidor de eco en UDP simple
 import SocketServer
 import sys
 import os
+import uaclient
+
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
+
 
 try:
     CONFIG = sys.argv[1]
 except IndexError:
-    print 'Usage1: python uaserver.py config'
+    print 'Usage: python uaserver.py config'
     raise SystemExit
 
 metodos = ('INVITE', 'BYE', 'ACK')
@@ -72,7 +75,10 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
             # Si no hay más líneas salimos del bucle infinito
             if not line:
                 break
-            print "El cliente nos manda:\r\n" + line
+            
+            ip_emisor = self.client_address[0]
+            port_emisor = self.client_address[1]
+            log.recv_from(ip_emisor, port_emisor, line)
 
             peticion = line.split()
             #Obtenemos el método del cliente
@@ -81,7 +87,7 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
             #Esta en mis metodos?
             if metodo not in metodos:
                 self.wfile.write('SIP/2.0 400 Method Not Allowed\r\n\r\n')
-                print 'Enviamos: SIP/2.0 400 Method Not Allowed\r\n\r\n'
+                log.sent_to(ip_emisor, port_emisor, line)
             else:
                 sip = peticion[1][:4]
                 version = peticion[2]
@@ -95,12 +101,11 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                         for parametro in sdp:
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
-                            
-                        self.wfile.write('SIP/2.0 100 Trying\r\n\r\n'
-                                         + 'SIP/2.0 180 Ringing\r\n\r\n')
-                                         
-                        print ('\r\nEnviamos: SIP/2.0 100 Trying\r\n\r\n'
-                               + 'Enviamos: SIP/2.0 180 Ringing\r\n\r\n')
+                        
+                        respuesta = 'SIP/2.0 100 Trying\r\n\r\n' \
+                                     + 'SIP/2.0 180 Ringing\r\n\r\n'
+                        self.wfile.write(respuesta)                
+                        log.sent_to(ip_emisor, port_emisor, respuesta)
                                
                         #Creamos la cabecera y sdp del 200 OK
                         respuesta = 'SIP/2.0 200 OK\r\n'
@@ -109,13 +114,15 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                             + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + str(port_rtp) + ' RTP'
                         respuesta = respuesta + CABECERA + sdp
                         self.wfile.write(respuesta)
-                        print '\r\nEnviamos:\r\n' + respuesta
+                        log.sent_to(ip_emisor, port_emisor, respuesta)
                         
                     elif metodo == 'BYE':
                         
                         #Enviamos el 200 OK 
-                        self.wfile.write('SIP/2.0 200 OK\r\n\r\n')
-                        print 'Enviamos: SIP/2.0 200 OK\r\n\r\n'
+                        respuesta = 'SIP/2.0 200 OK\r\n'
+                        self.wfile.write(respuesta)
+                        log.sent_to(ip_emisor, port_emisor, respuesta)
+                        log.eventos('Finishing.')
                         
                     elif metodo == 'ACK':
                     
@@ -129,8 +136,9 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                         os.system(aEjecutar)
                         print 'Ha terminado la cancion\r\n'
                 else:
-                    self.wfile.write('SIP/2.0 405 Bad Request\r\n\r\n')
-                    print 'Enviamos: SIP/2.0 405 Bad Request\r\n\r\n'
+                    respuesta = 'SIP/2.0 405 Bad Request\r\n\r\n'
+                    self.wfile.write(respuesta)
+                    log.sent_to(ip_emisor, port_emisor, respuesta)
 
 if __name__ == "__main__":
 
@@ -141,7 +149,7 @@ if __name__ == "__main__":
     try:
 	    parser.parse(open(CONFIG))
     except:
-	    print 'Usage2: python uaserver.py config'
+	    print 'Usage: python uaserver.py config'
 	    raise SystemExit
 	    
 	#Obtenemos los datos de la configuracion
@@ -168,4 +176,6 @@ if __name__ == "__main__":
     # Creamos servidor de eco y escuchamos
     serv = SocketServer.UDPServer(("", port_server), EchoHandler)
     print 'Listening...'
+    log = uaclient.Log(path_log)
+    log.eventos('Starting...')
     serv.serve_forever()
