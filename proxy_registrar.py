@@ -126,45 +126,41 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                         for parametro in sdp:
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
-                            
-                        #Buscamos si quien nos envia el mensaje esta registrado
+   
+                        #Buscamos si el destinatario y el emisor estan registrados
                         emisor = dic_sdp['o'].split()[0]
                         for client in dic_clients.keys():
                             if client == emisor:
-                                find_emisor = True
-                            
-                        #Buscamos si el destinatario esta registrado
-                        for client in dic_clients.keys():
-                        
-                            if client == user:
-                            
+                                find_emisor = True   
+                            elif client == user:
                                 find_recep = True
-                                #Reenviamos el mensaje a receptor
-                                ip_receptor = dic_clients[client][0]
-                                port_receptor = int(dic_clients[client][1])
-                                my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                                my_socket.connect((ip_receptor, port_receptor))
-                                print '\r\nReenviamos:\r\n' + line
-                                my_socket.send(line)
                                 
-                                #Esperamos la respuesta
-                                try:
-                                    data = my_socket.recv(1024)
-                                except socket.error:
-                                    print 'Error: No server listening at ' + ip_receptor + ' port ' + str(port_receptor)
-                                    raise SystemExit
-                                    
-                                print '\r\nRecibimos:\r\n' + data
-                                
-                                #Reenviamos el asentimiento al emisor
-                                self.wfile.write(data)
-                                print '\r\nReenviamos:\r\n' + data
-
                         if find_emisor == False or find_recep == False:
                             self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
                             print 'Enviamos: SIP/2.0 404 User Not Found\r\n\r\n'
+                        else:
+                            #Reenviamos el mensaje a receptor
+                            ip_receptor = dic_clients[user][0]
+                            port_receptor = int(dic_clients[user][1])
+                            my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                            my_socket.connect((ip_receptor, port_receptor))
+                            print '\r\nReenviamos:\r\n' + line
+                            my_socket.send(line)
                             
+                            #Esperamos la respuesta del servidor
+                            try:
+                                data = my_socket.recv(1024)
+                            except socket.error:
+                                print 'Error: No server listening at ' + ip_receptor + ' port ' + str(port_receptor)
+                                raise SystemExit
+                                
+                            print '\r\nRecibimos:\r\n' + data
+                            
+                            #Reenviamos el asentimiento al emisor
+                            self.wfile.write(data)
+                            print '\r\nReenviamos:\r\n' + data
+                         
                     elif metodo == 'ACK':
                     
                         #Buscamos si el destinatario esta registrado
@@ -172,8 +168,8 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                         
                             if client == user:
                                 encontrado = True
-                                ip_receptor = dic_clients[client][0]
-                                port_receptor = int(dic_clients[client][1])
+                                ip_receptor = dic_clients[user][0]
+                                port_receptor = int(dic_clients[user][1])
                                 #Reenviamos el ACK al receptor
                                 my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                                 my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -184,7 +180,40 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                         if encontrado == False:
                             self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
                             print '\r\nEnviamos: SIP/2.0 404 User Not Found\r\n\r\n'   
-                        
+                    
+                    elif metodo == 'BYE':
+                    
+                        #Buscamos si el destinatario esta registrado
+                        for client in dic_clients.keys():
+
+                            if client == user:
+                                encontrado = True
+                                ip_receptor = dic_clients[user][0]
+                                port_receptor = int(dic_clients[user][1])
+                                #Reenviamos el BYE al receptor
+                                my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                                my_socket.connect((ip_receptor, port_receptor))
+                                print '\r\nReenviamos:\r\n' + line
+                                my_socket.send(line)
+
+                        if encontrado == False:
+                            self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
+                            print '\r\nEnviamos: SIP/2.0 404 User Not Found\r\n\r\n'
+                        else:
+                            #Esperamos la respuesta del servidor
+                            try:
+                                data = my_socket.recv(1024)
+                            except socket.error:
+                                print 'Error: No server listening at ' + ip_receptor + ' port ' + str(port_receptor)
+                                raise SystemExit
+                                
+                            print '\r\nRecibimos:\r\n' + data
+                            
+                            #Reenviamos el asentimiento al emisor
+                            self.wfile.write(data)
+                            print '\r\nReenviamos:\r\n' + data
+                            
                 else:
                     self.wfile.write('SIP/2.0 400 Bad Request\r\n\r\n')
                     print '\r\nEnviamos: SIP/2.0 400 Bad Request\r\n\r\n'
