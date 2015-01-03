@@ -12,8 +12,6 @@ import time
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
-# Cliente UDP simple.
-
 
 class Log:
     """
@@ -21,7 +19,8 @@ class Log:
     """
     
     def __init__(self, path_log):
-    
+        
+        self.path_log = str(path_log)
         self.log = open(path_log, 'a')
     
     def sent_to(self, ip, port, mensaje):
@@ -31,7 +30,7 @@ class Log:
         evento = 'Sent to ' + ip + ':' + str(port) + ': ' + mensaje + '\r\n'
         string = hora + ' ' + str(evento)
         self.log.write(string)
-        print 'Añadimos a log: ' + string
+        print 'Añadimos a ' + self.path_log + ': ' + string
 
     def recv_from(self, ip, port, mensaje):
     
@@ -40,20 +39,20 @@ class Log:
         evento = 'Received form ' + ip + ':' + str(port) + ': ' + mensaje + '\r\n'
         string = hora + ' ' + str(evento)
         self.log.write(string)
-        print 'Añadimos a log: ' + string
+        print 'Añadimos a ' + self.path_log + ': ' + string
 
     def error(self, mensaje):
         
         hora = str(time.time())
         string = hora + ' ' + str(mensaje) + '\r\n'
-        print 'Añadimos a log: ' + string
+        print 'Añadimos a ' + self.path_log + ': ' + string
         
     def eventos(self, mensaje):
         
         hora = str(time.time())
         string = hora + ' ' + str(mensaje) + '\r\n'
         self.log.write(string)
-        print 'Añadimos a log: ' + string
+        print 'Añadimos a ' + self.path_log + ': ' + string
 
 class XMLHandlerUA(ContentHandler):
     """
