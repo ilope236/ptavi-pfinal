@@ -38,7 +38,52 @@ except ValueError:
 	raise SystemExit
 
 
+class Log:
+    """
+    Clase para escribir los mensajes en el fichero log
+    """
+    
+    def __init__(self, path_log):
+    
+        self.log = open(path_log, 'a')
+    
+    def sent_to(self, ip, port, mensaje):
+    
+        hora = str(time.time())
+        mensaje = mensaje.replace('\r\n', ' ')
+        evento = 'Sent to ' + ip + ':' + str(port) + ': ' + mensaje
+        string = hora + ' ' + str(evento)
+        self.log.write(string)
+        self.log.close()
+        print 'Añadimos a log: ' + string
 
+    def recv_from(self, ip, port, mensaje):
+    
+        hora = str(time.time())
+        mensaje = mensaje.replace('\r\n', ' ')
+        evento = 'Received form ' + ip + ':' + str(port) + ': ' + mensaje
+        string = hora + ' ' + str(evento)
+        self.log.write(string)
+        self.log.close()
+        print 'Añadimos a log: ' + string
+
+    def error(self, mensaje):
+        
+        hora = str(time.time())
+        mensaje = mensaje.replace('\r\n', ' ')
+        evento = 'Error: ' + mensaje
+        string = hora + ' ' + str(evento)
+        self.log.write(string)
+        self.log.close()
+        print 'Añadimos a log: ' + string
+        
+    def eventos(self, mensaje):
+        
+        hora = str(time.time())
+        string = hora + ' ' + mensaje
+        self.log.write(string)
+        self.log.close()
+        print 'Añadimos a log: ' + string
 
 class XMLHandlerUA(ContentHandler):
     """
