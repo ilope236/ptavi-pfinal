@@ -48,7 +48,7 @@ class XMLHandlerUA(ContentHandler):
             dic_attrs['tag'] = name
             for atributo in self.attrs[name]:
                 dic_attrs[atributo] = attrs.get(atributo, "")
-                #Guardamos en una lista los diccionarios de atributos
+            #Guardamos en una lista los diccionarios de atributos
             self.lista_dic.append(dic_attrs)
 
     def get_tags(self):
@@ -102,25 +102,28 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                         print ('\r\nEnviamos: SIP/2.0 100 Trying\r\n\r\n'
                                + 'Enviamos: SIP/2.0 180 Ringing\r\n\r\n')
                                
-                        #Creamos la cabecera y el sdp del 200 OK
+                        #Creamos la cabecera y sdp del 200 OK
                         respuesta = 'SIP/2.0 200 OK\r\n'
-                        
+                        CABECERA = 'Content-Type: application/sdp\r\n\r\n'
+                        sdp = 'v=0\r\n' + 'o=' + username + ' ' + ip_server + '\r\n' \
+                            + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + str(port_rtp) + ' RTP'
+                        respuesta = respuesta + CABECERA + sdp
                         self.wfile.write(respuesta)
-                        print 'Enviamos: ' + respuesta
+                        print '\r\nEnviamos:\r\n' + respuesta
                         
                     elif metodo == 'BYE':
                         
-                        #Creamos la cabecera y el sdp del 200 OK
-                        respuesta = 'SIP/2.0 200 OK\r\n'
-                        
-                        self.wfile.write(respuesta)
-                        print 'Enviamos: ' + respuesta
+                        #Enviamos el 200 OK 
+                        self.wfile.write('SIP/2.0 200 OK\r\n\r\n')
+                        print 'Enviamos: SIP/2.0 200 OK\r\n\r\n'
                         
                     elif metodo == 'ACK':
+                    
                         ip_receptor = dic_sdp['o'].split()[1]
-                        port_rtp = dic_sdp['m'].split()[1]
-                        print 'IP_RTP + PORT_RTP :', ip_receptor, port_rtp
-                        aEjecutar = './mp32rtp -i ' + ip_receptor + ' -p ' + str(port_rtp)
+                        port_rtp_recp = dic_sdp['m'].split()[1]
+
+                        #Enviamos RTP
+                        aEjecutar = './mp32rtp -i ' + ip_receptor + ' -p ' + str(port_rtp_recp)
                         aEjecutar += ' < ' + path_audio
                         print 'Vamos a ejecutar', aEjecutar
                         os.system(aEjecutar)
@@ -140,7 +143,7 @@ if __name__ == "__main__":
     except:
 	    print 'Usage2: python uaserver.py config'
 	    raise SystemExit
-	
+	    
 	#Obtenemos los datos de la configuracion
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'account':
@@ -160,6 +163,7 @@ if __name__ == "__main__":
             path_log = dicc['path']
         elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
+
 	    
     # Creamos servidor de eco y escuchamos
     serv = SocketServer.UDPServer(("", port_server), EchoHandler)
