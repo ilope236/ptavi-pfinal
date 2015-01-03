@@ -7,6 +7,7 @@ Programa cliente que abre un socket a un servidor
 import socket
 import sys
 import os
+import time
 
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
@@ -35,6 +36,9 @@ except IndexError:
 except ValueError:
 	print 'Usage3: python uaclient.py config method option'
 	raise SystemExit
+
+
+
 
 class XMLHandlerUA(ContentHandler):
     """
@@ -106,7 +110,9 @@ if __name__ == "__main__":
             path_log = dicc['path']
         elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
-
+    
+    log_ua = Log(path_log)
+    
     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -136,6 +142,7 @@ if __name__ == "__main__":
 
     print "\r\nEnviando:\r\n" + peticion
     my_socket.send(peticion)
+    log_ua.sent_to(ip_pr, port_pr, peticion)
 
     #Comprobamos que se escucha en el servidor
     try:
@@ -147,18 +154,35 @@ if __name__ == "__main__":
     print '\r\nRecibido:\r\n', data
 
     data = data.split('\r\n\r\n')
+    dic_sdp = {}
     #Comprobamos que han llegado todos los mensajes
     if data[0] == 'SIP/2.0 100 Trying':
         if data[1] == 'SIP/2.0 180 Ringing':
-            if data[2] == 'SIP/2.0 200 OK\r\n':
+            if data[2].split('\r\n')[0] == 'SIP/2.0 200 OK':
                 #Enviamos ACK
                 ack = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
                 print '\r\nEnviando:\r\n' , ack
                 my_socket.send(ack)
 
                 #Guardamos los datos de sdp del 200 OK
+                sdp = data[3].split('\r\n')
+                for parametro in sdp:
+                    key = parametro.split('=')[0]
+                    dic_sdp[key] = parametro.split('=')[1]
+                    
+                # Creamos el socket al otro UA
+                my_socket_UA = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                my_socket_UA.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                ip_UA = dic_sdp['o'].split()[1]
+                port_UA = int(dic_sdp['m'].split()[1])
+                my_socket_UA.connect((ip_UA, port_UA))
 
                 #Enviamos RTP
+                aEjecutar = './mp32rtp -i ' + ip_UA + ' -p ' + str(port_UA)
+                aEjecutar += ' < ' + path_audio
+                print 'Vamos a ejecutar', aEjecutar
+                os.system(aEjecutar)
+                print 'Ha terminado la cancion\r\n'
                 
     # Cerramos todo
 
