@@ -95,16 +95,27 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                         for parametro in sdp:
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
+                            
                         self.wfile.write('SIP/2.0 100 Trying\r\n\r\n'
-                                         + 'SIP/2.0 180 Ringing\r\n\r\n'
-                                         + 'SIP/2.0 200 OK\r\n\r\n')
+                                         + 'SIP/2.0 180 Ringing\r\n\r\n')
+                                         
                         print ('\r\nEnviamos: SIP/2.0 100 Trying\r\n\r\n'
-                               + 'Enviamos: SIP/2.0 180 Ringing\r\n\r\n'
-                               + 'Enviamos: SIP/2.0 200 OK\r\n\r\n')
+                               + 'Enviamos: SIP/2.0 180 Ringing\r\n\r\n')
                                
+                        #Creamos la cabecera y el sdp del 200 OK
+                        respuesta = 'SIP/2.0 200 OK\r\n'
+                        
+                        self.wfile.write(respuesta)
+                        print 'Enviamos: ' + respuesta
+                        
                     elif metodo == 'BYE':
-                        self.wfile.write('SIP/2.0 200 OK\r\n\r\n')
-                        print 'Enviamos: SIP/2.0 200 OK\r\n\r\n'
+                        
+                        #Creamos la cabecera y el sdp del 200 OK
+                        respuesta = 'SIP/2.0 200 OK\r\n'
+                        
+                        self.wfile.write(respuesta)
+                        print 'Enviamos: ' + respuesta
+                        
                     elif metodo == 'ACK':
                         ip_receptor = dic_sdp['o'].split()[1]
                         port_rtp = dic_sdp['m'].split()[1]
