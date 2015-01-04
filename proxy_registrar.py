@@ -16,13 +16,14 @@ from xml.sax.handler import ContentHandler
 #Comprobamos errores en los datos
 
 try:
-	CONFIG = sys.argv[1]
+    CONFIG = sys.argv[1]
 except IndexError:
-	print 'Usage: python proxy_registrar.py config'
-	raise SystemExit
+    print 'Usage: python proxy_registrar.py config'
+    raise SystemExit
 
 metodos = ('REGISTER', 'INVITE', 'BYE', 'ACK')
 dic_clients = {}
+
 
 class XMLHandlerPR(ContentHandler):
     """
@@ -37,8 +38,7 @@ class XMLHandlerPR(ContentHandler):
         self.attrs = {
             'server': ['name', 'ip', 'puerto'],
             'database': ['path', 'passwdpath'],
-            'log': ['path']
-        }
+            'log': ['path']}
 
     def startElement(self, name, attrs):
         """
@@ -49,10 +49,11 @@ class XMLHandlerPR(ContentHandler):
             dic_attrs['tag'] = name
             for atributo in self.attrs[name]:
                 dic_attrs[atributo] = attrs.get(atributo, "")
-                #Guardamos en una lista los diccionarios de atributos
+            #Guardamos en una lista los diccionarios de atributos
             self.lista_dic.append(dic_attrs)
 
-    def get_tags(self):
+
+def get_tags(self):
         """
         Función con la que se obtiene la lista de diccionarios de atributos
         """
@@ -85,7 +86,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                 respuesta = 'SIP/2.0 400 Method Not Allowed\r\n\r\n'
                 self.wfile.write(respuesta)
                 log.sent_to(ip_emisor, port_emisor, respuesta)
-                
+
             else:
                 #La peticion sigue el estandar SIP?
                 sip = peticion[1][:4]
@@ -94,9 +95,9 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                 if sip == 'sip:' and '@' in user and version == 'SIP/2.0':
 
                     self.buscar_clientes()
-                    
+
                     if metodo == 'REGISTER':
-                    
+
                         port = user.split(':')[1]
                         emisor = user.split(':')[0]
                         exp = int(peticion[4])
@@ -113,20 +114,20 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             hora_exp = time.time() + exp
                             expires = time.strftime(
                                 formato, time.gmtime(hora_exp))
-                            print "Guardamos user:" + user + " IP:" \
+                            print "Guardamos user:" + emisor + " IP:" \
                                 + ip_emisor + ' Port:' + str(port) + ' Date:' \
                                 + str(date) + ' Exp:' + str(expires) + '\n'
                             dic_clients[emisor] = [
                                 ip_emisor, port, date, expires]
-                            
+
                         self.register2file()
-                        
+
                         respuesta = 'SIP/2.0 200 OK\r\n\r\n'
                         self.wfile.write(respuesta)
                         log.sent_to(ip_emisor, port_emisor, respuesta)
-                        
+
                     elif metodo == 'INVITE':
-                        
+
                         #Guardamos los datos del sdp
                         peticion = line.split('\r\n\r\n')
                         sdp = peticion[1].split('\r\n')
@@ -134,16 +135,16 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                         for parametro in sdp:
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
-   
+
                         #Buscamos si destinatario y emisor están registrados
                         emisor = dic_sdp['o'].split()[0]
                         for client in dic_clients.keys():
                             if client == emisor:
-                                find_emisor = True   
+                                find_emisor = True
                             elif client == user:
                                 find_recep = True
-                                
-                        if find_emisor == False or find_recep == False:
+
+                        if find_emisor is False or find_recep is False:
                             respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
                             self.wfile.write(respuesta)
                             log.sent_to(ip_emisor, port_emisor, respuesta)
@@ -158,7 +159,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             my_socket.connect((ip_receptor, port_receptor))
                             my_socket.send(line)
                             log.sent_to(ip_receptor, port_receptor, line)
-                            
+
                             #Esperamos la respuesta del servidor
                             try:
                                 data = my_socket.recv(1024)
@@ -173,30 +174,32 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             #Reenviamos el asentimiento al emisor
                             self.wfile.write(data)
                             log.sent_to(ip_emisor, port_emisor, data)
-                         
+
                     elif metodo == 'ACK':
-                    
+
                         #Buscamos si el destinatario esta registrado
                         for client in dic_clients.keys():
-                        
+
                             if client == user:
                                 encontrado = True
                                 ip_receptor = dic_clients[user][0]
                                 port_receptor = int(dic_clients[user][1])
                                 #Reenviamos el ACK al receptor
-                                my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                                my_socket = socket.socket(
+                                    socket.AF_INET, socket.SOCK_DGRAM)
+                                my_socket.setsockopt(
+                                    socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                                 my_socket.connect((ip_receptor, port_receptor))
                                 my_socket.send(line)
                                 log.sent_to(ip_receptor, port_receptor, line)
 
-                        if encontrado == False:
+                        if encontrado is False:
                             respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
                             self.wfile.write(respuesta)
-                            log.sent_to(ip_emisor, port_emisor, respuesta)  
-                    
+                            log.sent_to(ip_emisor, port_emisor, respuesta)
+
                     elif metodo == 'BYE':
-                    
+
                         #Buscamos si el destinatario esta registrado
                         for client in dic_clients.keys():
 
@@ -205,13 +208,15 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 ip_receptor = dic_clients[user][0]
                                 port_receptor = int(dic_clients[user][1])
                                 #Reenviamos el BYE al receptor
-                                my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                                my_socket = socket.socket(
+                                    socket.AF_INET, socket.SOCK_DGRAM)
+                                my_socket.setsockopt(
+                                    socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                                 my_socket.connect((ip_receptor, port_receptor))
                                 my_socket.send(line)
                                 log.sent_to(ip_receptor, port_receptor, line)
 
-                        if encontrado == False:
+                        if encontrado is False:
                             respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
                             self.wfile.write(respuesta)
                             log.sent_to(ip_emisor, port_emisor, respuesta)
@@ -226,15 +231,16 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 log.error(error)
                                 raise SystemExit
                             log.recv_from(ip_receptor, port_receptor, data)
-                            
+
                             #Reenviamos el asentimiento al emisor
                             self.wfile.write(data)
                             log.sent_to(ip_emisor, port_emisor, data)
-                            
+                            log.eventos('Finishing.')
+
                 else:
                     self.wfile.write('SIP/2.0 400 Bad Request\r\n\r\n')
                     log.sent_to(ip_emisor, port_emisor, respuesta)
-                   
+
             print "DICCIONARIO CLIENTES:", dic_clients
             print
 
@@ -249,7 +255,8 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
             port = str(dic_clients[key][1])
             date = dic_clients[key][2]
             expire = str(dic_clients[key][3])
-            fich.write(key + '\t' + ip + '\t' + port + '\t' \
+            fich.write(
+                key + '\t' + ip + '\t' + port + '\t'
                 + date + '\t' + expire + '\n')
         fich.close()
 
@@ -276,7 +283,7 @@ if __name__ == "__main__":
         print 'Usage: python proxy_registrar.py config'
         raise SystemExit
 
-	#Obtenemos los datos de la configuracion
+    #Obtenemos los datos de la configuracion
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'server':
             name = dicc['name']
@@ -289,7 +296,7 @@ if __name__ == "__main__":
             passwdpath = dicc['passwdpath']
         elif dicc['tag'] == 'log':
             path_log = dicc['path']
-              
+
     # Creamos servidor register y escuchamos
     serv = SocketServer.UDPServer(("", port_pr), SIPRegisterHandler)
     print 'Server ' + name + ' listening at port ' + str(port_pr) + '...'
