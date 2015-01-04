@@ -118,7 +118,7 @@ if __name__ == "__main__":
             OPCION = int(sys.argv[3])
         else:
             OPCION = sys.argv[3]
-            if OPCION[-4:] != '.com' or '@' not in OPCION:
+            if '@' not in OPCION:
                 print 'Usage: python uaclient.py config method option'
                 raise SystemExit
     except IndexError:
