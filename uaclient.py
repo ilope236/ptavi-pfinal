@@ -226,6 +226,7 @@ if __name__ == "__main__":
                 ip_UA = dic_sdp['o'].split()[1]
                 port_UA = int(dic_sdp['m'].split()[1])
                 #Enviamos RTP
+                os.system('chmod +x mp32rtp')
                 aEjecutar = './mp32rtp -i ' + ip_UA + ' -p ' \
                     + str(port_UA) + ' < ' + path_audio
                 print 'Vamos a ejecutar', aEjecutar
