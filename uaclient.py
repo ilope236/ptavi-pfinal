@@ -1,14 +1,13 @@
 #!/usr/bin/python
 # -*- coding: iso-8859-15 -*-
 """
-Programa cliente que abre un socket a un servidor
+Programa y clases de un cliente de un User Agent en SIP
 """
 
 import socket
 import sys
 import os
 import time
-
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
@@ -17,14 +16,18 @@ class Log:
     """
     Clase para escribir los mensajes en el fichero log
     """
-    
+
     def __init__(self, path_log):
-        
+        '''
+        Constructor, creamos las variables
+        '''
         self.path_log = str(path_log)
         self.log = open(path_log, 'a')
-    
+
     def sent_to(self, ip, port, mensaje):
-    
+        '''
+        Función que escribe en el log cuando se envia un mensaje
+        '''
         hora = str(time.time())
         mensaje = mensaje.replace('\r\n', ' ')
         evento = 'Sent to ' + ip + ':' + str(port) + ': ' + mensaje + '\r\n'
@@ -33,26 +36,34 @@ class Log:
         print 'Añadimos a ' + self.path_log + ': ' + string
 
     def recv_from(self, ip, port, mensaje):
-    
+        '''
+        Función que escribe en el log cuando se recibe un mensaje
+        '''
         hora = str(time.time())
         mensaje = mensaje.replace('\r\n', ' ')
-        evento = 'Received form ' + ip + ':' + str(port) + ': ' + mensaje + '\r\n'
+        evento = 'Received form ' + ip + ':' + str(port) \
+            + ': ' + mensaje + '\r\n'
         string = hora + ' ' + str(evento)
         self.log.write(string)
         print 'Añadimos a ' + self.path_log + ': ' + string
 
     def error(self, mensaje):
-        
+        '''
+        Función que escribe en el log cuando se produce un error
+        '''
         hora = str(time.time())
         string = hora + ' ' + str(mensaje) + '\r\n'
         print 'Añadimos a ' + self.path_log + ': ' + string
-        
+
     def eventos(self, mensaje):
-        
+        '''
+        Función que escribe en el log cuando empieza o termina la sesión
+        '''
         hora = str(time.time())
         string = hora + ' ' + str(mensaje) + '\r\n'
         self.log.write(string)
         print 'Añadimos a ' + self.path_log + ': ' + string
+
 
 class XMLHandlerUA(ContentHandler):
     """
@@ -64,15 +75,15 @@ class XMLHandlerUA(ContentHandler):
         Constructor, creamos las variables
         """
         self.lista_dic = []
-        self.tags = ['account', 'uaserver', 'rtpaudio', 'regproxy', 'log', 'audio']
+        self.tags = [
+            'account', 'uaserver', 'rtpaudio', 'regproxy', 'log', 'audio']
         self.attrs = {
             'account': ['username', 'passwd'],
             'uaserver': ['ip', 'puerto'],
             'rtpaudio': ['puerto'],
             'regproxy': ['ip', 'puerto'],
             'log': ['path'],
-            'audio': ['path']
-        }
+            'audio': ['path']}
 
     def startElement(self, name, attrs):
         """
@@ -97,7 +108,6 @@ if __name__ == "__main__":
 
     #Comprobamos errores en los datos
     metodos = ('INVITE', 'BYE', 'REGISTER')
-
     try:
         CONFIG = sys.argv[1]
         METODO = sys.argv[2]
@@ -112,11 +122,11 @@ if __name__ == "__main__":
                 print 'Usage: python uaclient.py config method option'
                 raise SystemExit
     except IndexError:
-	    print 'Usage: python uaclient.py config method option'
-	    raise SystemExit
+        print 'Usage: python uaclient.py config method option'
+        raise SystemExit
     except ValueError:
-	    print 'Usage: python uaclient.py config method option'
-	    raise SystemExit
+        print 'Usage: python uaclient.py config method option'
+        raise SystemExit
 
     parser = make_parser()
     xHandler = XMLHandlerUA()
@@ -147,9 +157,9 @@ if __name__ == "__main__":
             path_log = dicc['path']
         elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
-    
+
     log_ua = Log(path_log)
-    
+
     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -158,22 +168,24 @@ if __name__ == "__main__":
     #Comprobamos el metodo para crear la peticion
     if METODO == 'REGISTER':
 
-        #Creamos la peticion REGISTER
-        peticion = METODO + ' sip:' + username + ':' + str(port_server) + ' SIP/2.0\r\n'
+        #Creamos la petición REGISTER
+        peticion = METODO + ' sip:' + username + ':' \
+            + str(port_server) + ' SIP/2.0\r\n'
         cabecera = 'Expires: ' + str(OPCION) + '\r\n\r\n'
         peticion = peticion + cabecera
-    
+
     elif METODO == 'INVITE':
-        
-        #Creamos la peticion INVITE
+
+        #Creamos la petición INVITE
         peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
         CABECERA = 'Content-Type: application/sdp\r\n\r\n'
         sdp = 'v=0\r\n' + 'o=' + username + ' ' + ip_server + '\r\n' \
-               + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + str(port_rtp) + ' RTP' 
+            + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + str(port_rtp) \
+            + ' RTP'
         peticion = peticion + CABECERA + sdp
 
     elif METODO == 'BYE':
-    
+
         #Creamos la petición BYE
         peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
 
@@ -184,18 +196,22 @@ if __name__ == "__main__":
     try:
         data = my_socket.recv(1024)
     except socket.error:
-        error = 'Error: No server listening at ' + ip_pr + ' port ' + str(port_pr)
+        error = 'Error: No server listening at ' + ip_pr \
+            + ' port ' + str(port_pr)
         log_ua.error(error)
         raise SystemExit
 
-    log_ua.recv_from(ip_pr, port_pr, data)
-
     data = data.split('\r\n\r\n')
     dic_sdp = {}
-    #Comprobamos que han llegado todos los mensajes
+    log_ua.recv_from(ip_pr, port_pr, data[0])
+
+    #Comprobamos que han llegado todos los mensajes de confirmación del INVITE
     if data[0] == 'SIP/2.0 100 Trying':
         if data[1] == 'SIP/2.0 180 Ringing':
+            log_ua.recv_from(ip_pr, port_pr, data[1])
             if data[2].split('\r\n')[0] == 'SIP/2.0 200 OK':
+
+                log_ua.recv_from(ip_pr, port_pr, data[2] + data[3])
                 #Enviamos ACK
                 ack = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
                 my_socket.send(ack)
@@ -210,12 +226,12 @@ if __name__ == "__main__":
                 ip_UA = dic_sdp['o'].split()[1]
                 port_UA = int(dic_sdp['m'].split()[1])
                 #Enviamos RTP
-                os.system("chmod +x mp32rtp")
-                aEjecutar = './mp32rtp -i ' + ip_UA + ' -p ' + str(port_UA) + ' < ' + path_audio 
+                aEjecutar = './mp32rtp -i ' + ip_UA + ' -p ' \
+                    + str(port_UA) + ' < ' + path_audio
                 print 'Vamos a ejecutar', aEjecutar
                 os.system(aEjecutar)
                 print 'Ha terminado la cancion\r\n'
-                
+
     # Cerramos todo
     log_ua.log.close()
     my_socket.close()
