@@ -9,7 +9,7 @@ import SocketServer
 import sys
 import time
 import socket
-import os
+import uaclient
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
@@ -18,7 +18,7 @@ from xml.sax.handler import ContentHandler
 try:
 	CONFIG = sys.argv[1]
 except IndexError:
-	print 'Usage1: python proxy_registrar.py config'
+	print 'Usage: python proxy_registrar.py config'
 	raise SystemExit
 
 metodos = ('REGISTER', 'INVITE', 'BYE', 'ACK')
@@ -65,23 +65,26 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
     """
     def handle(self):
         # Escribe dirección y puerto del cliente (de tupla client_address)
-        print 'DATOS CLIENTE: ', self.client_address
+        print 'DATOS EMISOR: ', self.client_address
         while 1:
             # Leyendo línea a línea lo que nos envía el cliente
             line = self.rfile.read()
             if not line:
                 break
-            print "El cliente nos manda:\r\n" + line
-            
+
+            ip_emisor = self.client_address[0]
+            port_emisor = self.client_address[1]
+            log.recv_from(ip_emisor, port_emisor, line)
+
             peticion = line.split()
             metodo = peticion[0]
             find_emisor = False
             find_recep = False
             #Es un metodo válido?
             if metodo not in metodos:
-            
-                self.wfile.write('SIP/2.0 400 Method Not Allowed\r\n\r\n')
-                print 'Enviamos: SIP/2.0 400 Method Not Allowed\r\n\r\n'
+                respuesta = 'SIP/2.0 400 Method Not Allowed\r\n\r\n'
+                self.wfile.write(respuesta)
+                log.sent_to(ip_emisor, port_emisor, respuesta)
                 
             else:
                 #La peticion sigue el estandar SIP?
@@ -90,7 +93,6 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                 user = peticion[1][4:]
                 if sip == 'sip:' and '@' in user and version == 'SIP/2.0':
 
-                    ip = self.client_address[0]
                     self.buscar_clientes()
                     
                     if metodo == 'REGISTER':
@@ -105,17 +107,23 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 del dic_clients[emisor]
                                 print "Borramos a :" + emisor
                         else:
+                            hora = time.time()
                             formato = '%Y-%m-%d %H:%M:%S'
-                            date = time.strftime(formato, time.gmtime(time.time()))
+                            date = time.strftime(formato, time.gmtime(hora))
                             hora_exp = time.time() + exp
-                            expires = time.strftime(formato, time.gmtime(hora_exp))
-                            print "Guardamos user:" + user + " IP:" + ip + ' Port:' + str(port) + \
-                                  ' Date:' + str(date) + ' Exp:' + str(expires) + '\n'
-                            dic_clients[emisor] = [ip, port, date, expires]
+                            expires = time.strftime(
+                                formato, time.gmtime(hora_exp))
+                            print "Guardamos user:" + user + " IP:" \
+                                + ip_emisor + ' Port:' + str(port) + ' Date:' \
+                                + str(date) + ' Exp:' + str(expires) + '\n'
+                            dic_clients[emisor] = [
+                                ip_emisor, port, date, expires]
                             
                         self.register2file()
-                        self.wfile.write('SIP/2.0 200 OK\r\n\r\n')
-                        print '\r\nEnviamos:\r\nSIP/2.0 200 OK\r\n\r\n'
+                        
+                        respuesta = 'SIP/2.0 200 OK\r\n\r\n'
+                        self.wfile.write(respuesta)
+                        log.sent_to(ip_emisor, port_emisor, respuesta)
                         
                     elif metodo == 'INVITE':
                         
@@ -127,7 +135,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
    
-                        #Buscamos si el destinatario y el emisor estan registrados
+                        #Buscamos si destinatario y emisor están registrados
                         emisor = dic_sdp['o'].split()[0]
                         for client in dic_clients.keys():
                             if client == emisor:
@@ -136,30 +144,35 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 find_recep = True
                                 
                         if find_emisor == False or find_recep == False:
-                            self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
-                            print 'Enviamos: SIP/2.0 404 User Not Found\r\n\r\n'
+                            respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
+                            self.wfile.write(respuesta)
+                            log.sent_to(ip_emisor, port_emisor, respuesta)
                         else:
                             #Reenviamos el mensaje a receptor
                             ip_receptor = dic_clients[user][0]
                             port_receptor = int(dic_clients[user][1])
-                            my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                            my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                            my_socket = socket.socket(
+                                socket.AF_INET, socket.SOCK_DGRAM)
+                            my_socket.setsockopt(
+                                socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                             my_socket.connect((ip_receptor, port_receptor))
-                            print '\r\nReenviamos:\r\n' + line
                             my_socket.send(line)
+                            log.sent_to(ip_receptor, port_receptor, line)
                             
                             #Esperamos la respuesta del servidor
                             try:
                                 data = my_socket.recv(1024)
                             except socket.error:
-                                print 'Error: No server listening at ' + ip_receptor + ' port ' + str(port_receptor)
+                                error = 'Error: No server listening at ' \
+                                    + ip_receptor + ' port ' \
+                                    + str(port_receptor)
+                                log.error(error)
                                 raise SystemExit
-                                
-                            print '\r\nRecibimos:\r\n' + data
-                            
+                            log.recv_from(ip_receptor, port_receptor, data)
+
                             #Reenviamos el asentimiento al emisor
                             self.wfile.write(data)
-                            print '\r\nReenviamos:\r\n' + data
+                            log.sent_to(ip_emisor, port_emisor, data)
                          
                     elif metodo == 'ACK':
                     
@@ -174,12 +187,13 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                                 my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                                 my_socket.connect((ip_receptor, port_receptor))
-                                print '\r\nReenviamos:\r\n' + line
                                 my_socket.send(line)
+                                log.sent_to(ip_receptor, port_receptor, line)
 
                         if encontrado == False:
-                            self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
-                            print '\r\nEnviamos: SIP/2.0 404 User Not Found\r\n\r\n'   
+                            respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
+                            self.wfile.write(respuesta)
+                            log.sent_to(ip_emisor, port_emisor, respuesta)  
                     
                     elif metodo == 'BYE':
                     
@@ -194,29 +208,32 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                                 my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                                 my_socket.connect((ip_receptor, port_receptor))
-                                print '\r\nReenviamos:\r\n' + line
                                 my_socket.send(line)
+                                log.sent_to(ip_receptor, port_receptor, line)
 
                         if encontrado == False:
-                            self.wfile.write('SIP/2.0 404 User Not Found\r\n\r\n')
-                            print '\r\nEnviamos: SIP/2.0 404 User Not Found\r\n\r\n'
+                            respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
+                            self.wfile.write(respuesta)
+                            log.sent_to(ip_emisor, port_emisor, respuesta)
                         else:
                             #Esperamos la respuesta del servidor
                             try:
                                 data = my_socket.recv(1024)
                             except socket.error:
-                                print 'Error: No server listening at ' + ip_receptor + ' port ' + str(port_receptor)
+                                error = 'Error: No server listening at ' \
+                                    + ip_receptor + ' port ' \
+                                    + str(port_receptor)
+                                log.error(error)
                                 raise SystemExit
-                                
-                            print '\r\nRecibimos:\r\n' + data
+                            log.recv_from(ip_receptor, port_receptor, data)
                             
                             #Reenviamos el asentimiento al emisor
                             self.wfile.write(data)
-                            print '\r\nReenviamos:\r\n' + data
+                            log.sent_to(ip_emisor, port_emisor, data)
                             
                 else:
                     self.wfile.write('SIP/2.0 400 Bad Request\r\n\r\n')
-                    print '\r\nEnviamos: SIP/2.0 400 Bad Request\r\n\r\n'
+                    log.sent_to(ip_emisor, port_emisor, respuesta)
                    
             print "DICCIONARIO CLIENTES:", dic_clients
             print
@@ -232,7 +249,8 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
             port = str(dic_clients[key][1])
             date = dic_clients[key][2]
             expire = str(dic_clients[key][3])
-            fich.write(key + '\t' + ip + '\t' + port + '\t' + date + '\t' + expire + '\n')
+            fich.write(key + '\t' + ip + '\t' + port + '\t' \
+                + date + '\t' + expire + '\n')
         fich.close()
 
     def buscar_clientes(self):
@@ -257,7 +275,7 @@ if __name__ == "__main__":
     except:
         print 'Usage: python proxy_registrar.py config'
         raise SystemExit
-        
+
 	#Obtenemos los datos de la configuracion
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'server':
@@ -274,5 +292,7 @@ if __name__ == "__main__":
               
     # Creamos servidor register y escuchamos
     serv = SocketServer.UDPServer(("", port_pr), SIPRegisterHandler)
-    print 'Server ' + name + ' listening at port ' + str(port_pr) + '...\n'
+    print 'Server ' + name + ' listening at port ' + str(port_pr) + '...'
+    log = uaclient.Log(path_log)
+    log.eventos('Starting...')
     serv.serve_forever()
