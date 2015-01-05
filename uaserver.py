@@ -21,7 +21,6 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
     """
 
     def handle(self):
-        print self.client_address
         while 1:
             # Leyendo línea a línea lo que nos envía el cliente
             line = self.rfile.read()
@@ -76,7 +75,7 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                     elif metodo == 'BYE':
 
                         #Enviamos el 200 OK
-                        respuesta = 'SIP/2.0 200 OK\r\n'
+                        respuesta = 'SIP/2.0 200 OK\r\n\r\n'
                         self.wfile.write(respuesta)
                         log.sent_to(ip_emisor, port_emisor, respuesta)
                         log.eventos('Finishing.')
@@ -87,9 +86,10 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
                         port_rtp_recp = dic_sdp['m'].split()[1]
 
                         #Enviamos RTP
+                        os.system('chmod +x mp32rtp')
                         aEjecutar = './mp32rtp -i ' + ip_receptor + ' -p ' \
                             + str(port_rtp_recp) + ' < ' + path_audio
-                        print 'Vamos a ejecutar', aEjecutar
+                        print 'Vamos a ejecutar ', aEjecutar
                         os.system(aEjecutar)
                         print 'Ha terminado la cancion\r\n'
                 else:
