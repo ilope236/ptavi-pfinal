@@ -13,13 +13,6 @@ import uaclient
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
-#Comprobamos errores en los datos
-
-try:
-    CONFIG = sys.argv[1]
-except IndexError:
-    print 'Usage: python proxy_registrar.py config'
-    raise SystemExit
 
 metodos = ('REGISTER', 'INVITE', 'BYE', 'ACK')
 dic_clients = {}
@@ -273,13 +266,22 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
 
 
 if __name__ == "__main__":
+
+    #Comprobamos errores en los datos
+    try:
+        CONFIG = sys.argv[1]
+    except IndexError:
+        print 'Usage: python proxy_registrar.py config'
+        raise SystemExit
+
     parser = make_parser()
     xHandler = XMLHandlerPR()
     parser.setContentHandler(xHandler)
+
     #Comprobamos que el fichero .xml es válido
     try:
         parser.parse(open(CONFIG))
-    except:
+    except IOError:
         print 'Usage: python proxy_registrar.py config'
         raise SystemExit
 
