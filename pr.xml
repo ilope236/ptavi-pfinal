@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-	<server name="proxy" ip="127.0.0.1" puerto="3333"/>
-	<database path="usuarios.txt" passwdpath=""/>
-	<log path="pr_log.txt"/>
+	<server name="MiServidorRegProxy" ip="" puerto="7777"/>
+	<database path="registered.txt" passwdpath=""/>
+	<log path="log_pr.txt"/>
 </config>
