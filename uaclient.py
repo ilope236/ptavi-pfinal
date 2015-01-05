@@ -22,47 +22,55 @@ class Log:
         Constructor, creamos las variables
         '''
         self.path_log = str(path_log)
-        self.log = open(path_log, 'a')
 
     def sent_to(self, ip, port, mensaje):
         '''
         Función que escribe en el log cuando se envia un mensaje
         '''
+        log = open(self.path_log, 'a')
         hora = str(time.time())
         mensaje = mensaje.replace('\r\n', ' ')
         evento = 'Sent to ' + ip + ':' + str(port) + ': ' + mensaje + '\r\n'
         string = hora + ' ' + str(evento)
-        self.log.write(string)
+        log.write(string)
         print 'Añadimos a ' + self.path_log + ': ' + string
+        log.close()
 
     def recv_from(self, ip, port, mensaje):
         '''
         Función que escribe en el log cuando se recibe un mensaje
         '''
+        log = open(self.path_log, 'a')
         hora = str(time.time())
         mensaje = mensaje.replace('\r\n', ' ')
         evento = 'Received form ' + ip + ':' + str(port) \
             + ': ' + mensaje + '\r\n'
         string = hora + ' ' + str(evento)
-        self.log.write(string)
+        log.write(string)
         print 'Añadimos a ' + self.path_log + ': ' + string
+        log.close()
 
     def error(self, mensaje):
         '''
         Función que escribe en el log cuando se produce un error
         '''
+        log = open(self.path_log, 'a')
         hora = str(time.time())
         string = hora + ' ' + str(mensaje) + '\r\n'
+        log.write(string)
         print 'Añadimos a ' + self.path_log + ': ' + string
+        log.close()
 
     def eventos(self, mensaje):
         '''
         Función que escribe en el log cuando empieza o termina la sesión
         '''
+        log = open(self.path_log, 'a')
         hora = str(time.time())
         string = hora + ' ' + str(mensaje) + '\r\n'
-        self.log.write(string)
+        log.write(string)
         print 'Añadimos a ' + self.path_log + ': ' + string
+        log.close()
 
 
 class XMLHandlerUA(ContentHandler):
@@ -187,7 +195,7 @@ if __name__ == "__main__":
     elif METODO == 'BYE':
 
         #Creamos la petición BYE
-        peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
+        peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n\r\n'
 
     my_socket.send(peticion)
     log_ua.sent_to(ip_pr, port_pr, peticion)
@@ -211,9 +219,9 @@ if __name__ == "__main__":
             log_ua.recv_from(ip_pr, port_pr, data[1])
             if data[2].split('\r\n')[0] == 'SIP/2.0 200 OK':
 
-                log_ua.recv_from(ip_pr, port_pr, data[2] + data[3])
+                log_ua.recv_from(ip_pr, port_pr, data[2] + ' ' + data[3])
                 #Enviamos ACK
-                ack = 'ACK sip:' + OPCION + ' SIP/2.0\r\n'
+                ack = 'ACK sip:' + OPCION + ' SIP/2.0\r\n\r\n'
                 my_socket.send(ack)
                 log_ua.sent_to(ip_pr, port_pr, ack)
 
@@ -234,6 +242,5 @@ if __name__ == "__main__":
                 print 'Ha terminado la cancion\r\n'
 
     # Cerramos todo
-    log_ua.log.close()
     my_socket.close()
     print "Fin."
