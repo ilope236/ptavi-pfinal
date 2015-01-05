@@ -59,7 +59,6 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
     """
     def handle(self):
         # Escribe dirección y puerto del cliente (de tupla client_address)
-        print 'DATOS EMISOR: ', self.client_address
         while 1:
             # Leyendo línea a línea lo que nos envía el cliente
             line = self.rfile.read()
@@ -161,7 +160,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                     + ip_receptor + ' port ' \
                                     + str(port_receptor)
                                 log.error(error)
-                                raise SystemExit
+                                break
                             log.recv_from(ip_receptor, port_receptor, data)
 
                             #Reenviamos el asentimiento al emisor
@@ -222,7 +221,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                     + ip_receptor + ' port ' \
                                     + str(port_receptor)
                                 log.error(error)
-                                raise SystemExit
+                                break
                             log.recv_from(ip_receptor, port_receptor, data)
 
                             #Reenviamos el asentimiento al emisor
