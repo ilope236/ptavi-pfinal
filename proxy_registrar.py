@@ -46,11 +46,11 @@ class XMLHandlerPR(ContentHandler):
             self.lista_dic.append(dic_attrs)
 
 
-def get_tags(self):
-        """
-        Función con la que se obtiene la lista de diccionarios de atributos
-        """
-        return self.lista_dic
+    def get_tags(self):
+            """
+            Función con la que se obtiene la lista de diccionarios de atributos
+            """
+            return self.lista_dic
 
 
 class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
@@ -58,7 +58,6 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
     SIP server register and proxy class
     """
     def handle(self):
-        # Escribe dirección y puerto del cliente (de tupla client_address)
         while 1:
             # Leyendo línea a línea lo que nos envía el cliente
             line = self.rfile.read()
@@ -128,6 +127,9 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             key = parametro.split('=')[0]
                             dic_sdp[key] = parametro.split('=')[1]
 
+                        #Comprobamos que el sdp es correcto
+                        check_sdp(dic_sdp)
+
                         #Buscamos si destinatario y emisor están registrados
                         emisor = dic_sdp['o'].split()[0]
                         for client in dic_clients.keys():
@@ -141,6 +143,9 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             self.wfile.write(respuesta)
                             log.sent_to(ip_emisor, port_emisor, respuesta)
                         else:
+                            #Guardamos a los participantes de la conversación
+                            participantes = [emisor, user]
+
                             #Reenviamos el mensaje a receptor
                             ip_receptor = dic_clients[user][0]
                             port_receptor = int(dic_clients[user][1])
@@ -193,9 +198,10 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                     elif metodo == 'BYE':
 
                         #Buscamos si el destinatario esta registrado
+                        #Buscamos si es participante de la conversación
                         for client in dic_clients.keys():
 
-                            if client == user:
+                            if client == user and user in participantes:
                                 encontrado = True
                                 ip_receptor = dic_clients[user][0]
                                 port_receptor = int(dic_clients[user][1])
@@ -240,7 +246,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
         """
         Registramos a los clientes en un fichero:
         """
-        fich = open('registered.txt', 'w')
+        fich = open(data_path, 'w')
         fich.write('User\tIP\tPuerto\tResgistro\tExpires\n')
         for key in dic_clients.keys():
             ip = dic_clients[key][0]
@@ -264,6 +270,23 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                 print "Borramos a :" + key
 
 
+def check_ip(ip):
+    """
+    Función que comprueba que una IP sea de un rango correcto
+    """
+    campo_ip = ip_pr.split('.')
+    check = False
+    if campo_ip[0] >= '0' and campo_ip[0] <= '255':
+        if campo_ip[1] >= '0' and campo_ip[1] <= '255':
+            if campo_ip[2] >= '0' and campo_ip[2] <= '255':
+                if campo_ip[3] >= '0' and campo_ip[3] <= '255':
+                    check = True
+    if check is False:
+        print 'Usage: python proxy_registrar.py config'
+        raise SystemExit
+
+
+                  
 if __name__ == "__main__":
 
     #Comprobamos errores en los datos
@@ -284,14 +307,20 @@ if __name__ == "__main__":
         print 'Usage: python proxy_registrar.py config'
         raise SystemExit
 
-    #Obtenemos los datos de la configuracion
+    #Obtenemos los datos de la configuracion y comprobamos errores
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'server':
             name = dicc['name']
             ip_pr = dicc['ip']
             if ip_pr == "":
                 ip_pr = "127.0.0.1"
-            port_pr = int(dicc['puerto'])
+            check_ip(ip_pr)
+            port_pr = dicc['puerto']
+            try:
+                port_pr = int(port_pr)
+            except ValueError:
+                print 'Usage: python uaclient.py config method option'
+                raise SystemExit
         elif dicc['tag'] == 'database':
             data_path = dicc['path']
             passwdpath = dicc['passwdpath']
