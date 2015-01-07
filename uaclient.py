@@ -112,6 +112,34 @@ class XMLHandlerUA(ContentHandler):
         return self.lista_dic
 
 
+def check_ip(ip):
+    """
+    Función que comprueba que una IP sea de un rango correcto
+    """
+    campo_ip = ip.split('.')
+    check = False
+    if campo_ip[0] >= '0' and campo_ip[0] <= '255':
+        if campo_ip[1] >= '0' and campo_ip[1] <= '255':
+            if campo_ip[2] >= '0' and campo_ip[2] <= '255':
+                if campo_ip[3] >= '0' and campo_ip[3] <= '255':
+                    check = True
+    return check
+
+
+def check_port(port):
+    """
+    Función que comprueba que un puerto sea un número positivo y un entero
+    """
+    check = False
+    if port >= '0':
+        check = True
+        try:
+            port = int(port)
+        except ValueError:
+            check = False
+    return check
+
+
 if __name__ == "__main__":
 
     #Comprobamos errores en los datos
@@ -155,30 +183,47 @@ if __name__ == "__main__":
             ip_server = dicc['ip']
             if ip_server == "":
                 ip_server = '127.0.0.1'
-            port_server = int(dicc['puerto'])
+            c_ip_serv = check_ip(ip_server)
+            port_server = dicc['puerto']
+            c_port_serv = check_port(port_server)
         elif dicc['tag'] == 'rtpaudio':
-            port_rtp = int(dicc['puerto'])
+            port_rtp = dicc['puerto']
+            c_port_rtp = check_port(port_rtp)
         elif dicc['tag'] == 'regproxy':
             ip_pr = dicc['ip']
-            port_pr = int(dicc['puerto'])
+            c_ip_pr = check_ip(ip_pr)
+            port_pr = dicc['puerto']
+            c_port_pr = check_port(port_pr)
         elif dicc['tag'] == 'log':
             path_log = dicc['path']
         elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
+
+    #Si hay alguna IP o puerto incorrecto imprimimos error
+    print c_ip_serv
+    print c_port_serv
+    print c_port_rtp
+    print c_ip_pr
+    print c_port_pr
+    if c_ip_serv is False or c_port_serv is False or c_port_rtp is False \
+        or c_ip_pr is False or c_port_pr is False:
+        print 'Usage11: python uaclient.py config method option'
+        raise SystemExit
+    
 
     log_ua = Log(path_log)
 
     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    my_socket.connect((ip_pr, port_pr))
+    my_socket.connect((ip_pr, int(port_pr)))
 
     #Comprobamos el metodo para crear la peticion
     if METODO == 'REGISTER':
 
         #Creamos la petición REGISTER
         peticion = METODO + ' sip:' + username + ':' \
-            + str(port_server) + ' SIP/2.0\r\n'
+            + port_server + ' SIP/2.0\r\n'
         cabecera = 'Expires: ' + str(OPCION) + '\r\n\r\n'
         peticion = peticion + cabecera
 
@@ -188,7 +233,7 @@ if __name__ == "__main__":
         peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n'
         CABECERA = 'Content-Type: application/sdp\r\n\r\n'
         sdp = 'v=0\r\n' + 'o=' + username + ' ' + ip_server + '\r\n' \
-            + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + str(port_rtp) \
+            + 's=MiSesion\r\n' + 't=0\r\n' + 'm=audio ' + port_rtp \
             + ' RTP'
         peticion = peticion + CABECERA + sdp
 
@@ -198,14 +243,14 @@ if __name__ == "__main__":
         peticion = METODO + ' sip:' + OPCION + ' SIP/2.0\r\n\r\n'
 
     my_socket.send(peticion)
-    log_ua.sent_to(ip_pr, port_pr, peticion)
+    log_ua.sent_to(ip_pr, int(port_pr), peticion)
 
     #Comprobamos que se escucha en el servidor
     try:
         data = my_socket.recv(1024)
     except socket.error:
         error = 'Error: No server listening at ' + ip_pr \
-            + ' port ' + str(port_pr)
+            + ' port ' + port_pr
         log_ua.error(error)
         raise SystemExit
 
