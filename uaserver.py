@@ -116,7 +116,7 @@ if __name__ == "__main__":
         print 'Usage: python uaserver.py config'
         raise SystemExit
 
-    #Obtenemos los datos de la configuracion
+   #Obtenemos los datos de la configuracion
     for dicc in xHandler.lista_dic:
         if dicc['tag'] == 'account':
             username = dicc['username']
@@ -125,19 +125,30 @@ if __name__ == "__main__":
             ip_server = dicc['ip']
             if ip_server == "":
                 ip_server = '127.0.0.1'
-            port_server = int(dicc['puerto'])
+            c_ip_serv = uaclient.check_ip(ip_server)
+            port_server = dicc['puerto']
+            c_port_serv = uaclient.check_port(port_server)
         elif dicc['tag'] == 'rtpaudio':
-            port_rtp = int(dicc['puerto'])
+            port_rtp = dicc['puerto']
+            c_port_rtp = uaclient.check_port(port_rtp)
         elif dicc['tag'] == 'regproxy':
             ip_pr = dicc['ip']
-            port_pr = int(dicc['puerto'])
+            c_ip_pr = uaclient.check_ip(ip_pr)
+            port_pr = dicc['puerto']
+            c_port_pr = uaclient.check_port(port_pr)
         elif dicc['tag'] == 'log':
             path_log = dicc['path']
         elif dicc['tag'] == 'audio':
             path_audio = dicc['path']
 
+    #Si hay alguna IP o puerto incorrecto imprimimos error
+    if c_ip_serv is False or c_port_serv is False or c_port_rtp is False \
+        or c_ip_pr is False or c_port_pr is False:
+        print 'Usage: python uaclient.py config method option'
+        raise SystemExit 
+
     # Creamos servidor de eco y escuchamos
-    serv = SocketServer.UDPServer(("", port_server), EchoHandler)
+    serv = SocketServer.UDPServer(("", int(port_server)), EchoHandler)
     print 'Listening...'
     log = uaclient.Log(path_log)
     log.eventos('Starting...')
