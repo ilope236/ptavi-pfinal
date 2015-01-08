@@ -156,7 +156,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             else:
 
                                 #Creamos la cabecera Proxy
-                                cab_proxy = cabecera_proxy
+                                cab_pr = self.cabecera_proxy()
                                 #Reenviamos el mensaje a receptor
                                 ip_receptor = dic_clients[user][0]
                                 port_receptor = int(dic_clients[user][1])
@@ -302,8 +302,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             ip = datos_o[1]
                             #Comprobamos que la IP es válida
                             check_ip = uaclient.check_ip(ip)
-                            #Comprobamos que el usuario tiene esa IP
-                            if check_ip and ip in dic_clients[emisor]:
+                            if check_ip:
                                 if 'm' in dic_sdp.keys():
                                     datos_m = dic_sdp['m'].split()
                                     #Comprobamos que hay 3 campos
@@ -318,7 +317,13 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                             campos_sdp = True
         return campos_sdp 
 
-
+    def cabecera_proxy(self):
+        """
+        Función que crea la cabecera del proxy
+        """
+        num = random.random()
+        cabecera = 'Via: SIP/2.0/UDP ' + ip_pr + ':' + port_pr + ';' + 'branch=' + str(num) + '\r\n'
+        return cabecera
                   
 if __name__ == "__main__":
 
