@@ -82,13 +82,17 @@ class EchoHandler(SocketServer.DatagramRequestHandler):
 
                     elif metodo == 'ACK':
 
-                        ip_receptor = dic_sdp['o'].split()[1]
+                        ip_recp = dic_sdp['o'].split()[1]
                         port_rtp_recp = dic_sdp['m'].split()[1]
 
                         #Enviamos RTP
                         os.system('chmod +x mp32rtp')
-                        aEjecutar = './mp32rtp -i ' + ip_receptor + ' -p ' \
+                        aEjecutar = './mp32rtp -i ' + ip_recp + ' -p ' \
                             + str(port_rtp_recp) + ' < ' + path_audio
+                        aEjecutar_cvlc = 'cvlc rtp://@' + ip_recp + ':'\
+                            + str(port_rtp_recp) + ' 2> /dev/null'
+                        print 'Vamos a ejecutar', aEjecutar_cvlc
+                        os.system(aEjecutar_cvlc + '&')
                         print 'Vamos a ejecutar ', aEjecutar
                         os.system(aEjecutar)
                         print 'Ha terminado la cancion\r\n'
@@ -144,7 +148,7 @@ if __name__ == "__main__":
     #Si hay alguna IP o puerto incorrecto imprimimos error
     if c_ip_serv is False or c_port_serv is False or c_port_rtp is False \
         or c_ip_pr is False or c_port_pr is False:
-        print 'Usage: python uaclient.py config method option'
+        print 'Usage: python uaserver.py config'
         raise SystemExit 
 
     # Creamos servidor de eco y escuchamos
