@@ -200,16 +200,10 @@ if __name__ == "__main__":
             path_audio = dicc['path']
 
     #Si hay alguna IP o puerto incorrecto imprimimos error
-    print c_ip_serv
-    print c_port_serv
-    print c_port_rtp
-    print c_ip_pr
-    print c_port_pr
     if c_ip_serv is False or c_port_serv is False or c_port_rtp is False \
         or c_ip_pr is False or c_port_pr is False:
-        print 'Usage11: python uaclient.py config method option'
-        raise SystemExit
-    
+        print 'Usage: python uaclient.py config method option'
+        raise SystemExit  
 
     log_ua = Log(path_log)
 
@@ -259,8 +253,8 @@ if __name__ == "__main__":
     log_ua.recv_from(ip_pr, port_pr, data[0])
 
     #Comprobamos que han llegado todos los mensajes de confirmación del INVITE
-    if data[0] == 'SIP/2.0 100 Trying':
-        if data[1] == 'SIP/2.0 180 Ringing':
+    if data[0].split('\r\n')[0] == 'SIP/2.0 100 Trying':
+        if data[1].split('\r\n')[0] == 'SIP/2.0 180 Ringing':
             log_ua.recv_from(ip_pr, port_pr, data[1])
             if data[2].split('\r\n')[0] == 'SIP/2.0 200 OK':
 
