@@ -155,8 +155,13 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 log.sent_to(ip_emisor, port_emisor, respuest)
                             else:
 
-                                #Creamos la cabecera Proxy
+                                #Introducimos cabecera proxy
                                 cab_pr = self.cabecera_proxy()
+                                new_inv = peticion[0].split('\r\n')
+                                cab = new_inv[0] + '\r\n' + cab_pr + \
+                                    new_inv[1] + '\r\n\r\n'
+                                new_inv = cab + peticion[1]
+
                                 #Reenviamos el mensaje a receptor
                                 ip_receptor = dic_clients[user][0]
                                 port_receptor = int(dic_clients[user][1])
@@ -165,10 +170,11 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 my_socket.setsockopt(
                                     socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                                 my_socket.connect((ip_receptor, port_receptor))
-                                my_socket.send(line)
-                                log.sent_to(ip_receptor, port_receptor, line)
+                                my_socket.send(new_inv)
+                                log.sent_to(
+                                    ip_receptor, port_receptor, new_inv)
 
-                                #Esperamos la respuesta del servidor
+                                #Esperamos el 100, 180 y 200 del servidor
                                 try:
                                     data = my_socket.recv(1024)
                                 except socket.error:
@@ -176,12 +182,27 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                         + ip_receptor + ' port ' \
                                         + str(port_receptor)
                                     log.error(error)
+                                    resp = 'SIP/2.0 404 User Not Found\r\n\r\n'
+                                    self.wfile.write(respuesta)
+                                    log.sent_to(ip_emisor, port_emisor, resp)
                                     break
                                 log.recv_from(ip_receptor, port_receptor, data)
 
-                                #Reenviamos el asentimiento al emisor
-                                self.wfile.write(data)
-                                log.sent_to(ip_emisor, port_emisor, data)
+                                #Introducimos cabecera proxy
+                                new_data = data.split('\r\n\r\n')
+                                cab_pr = self.cabecera_proxy()
+                                trying = new_data[0] + '\r\n' + cab_pr + '\r\n'
+                                cab_pr = self.cabecera_proxy()
+                                ring = new_data[1] + '\r\n' + cab_pr + '\r\n'
+                                cab_pr = self.cabecera_proxy()
+                                ok = new_data[2].split('\r\n')
+                                sdp = new_data[3]
+                                ok = ok[0] + '\r\n' + cab_pr + ok[1] + '\r\n\r\n'
+                                new_data = trying + ring + ok + sdp
+
+                                #Reenviamos el nuevo asentimiento al emisor
+                                self.wfile.write(new_data)
+                                log.sent_to(ip_emisor, port_emisor, new_data)
 
                     elif metodo == 'ACK':
 
@@ -192,14 +213,21 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 encontrado = True
                                 ip_receptor = dic_clients[user][0]
                                 port_receptor = int(dic_clients[user][1])
-                                #Reenviamos el ACK al receptor
+
+                                #Introducimos cabecera proxy
+                                cab_pr = self.cabecera_proxy()
+                                ack = line.split('\r\n\r\n')[0] + '\r\n'
+                                new_ack = ack + cab_pr + '\r\n'
+
+                                #Reenviamos el nuevo ACK al receptor
                                 my_socket = socket.socket(
                                     socket.AF_INET, socket.SOCK_DGRAM)
                                 my_socket.setsockopt(
                                     socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                                 my_socket.connect((ip_receptor, port_receptor))
-                                my_socket.send(line)
-                                log.sent_to(ip_receptor, port_receptor, line)
+                                my_socket.send(new_ack)
+                                log.sent_to(
+                                    ip_receptor, port_receptor, new_ack)
 
                         if encontrado is False:
                             respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
@@ -216,7 +244,13 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 find_recep = True
                                 ip_receptor = dic_clients[user][0]
                                 port_receptor = int(dic_clients[user][1])
-                                #Reenviamos el BYE al receptor
+
+                                #Introducimos cabecera proxy
+                                cab_pr = self.cabecera_proxy()
+                                bye = line.split('\r\n\r\n')[0] + '\r\n'
+                                new_bye = bye + cab_pr + '\r\n'
+
+                                #Reenviamos el nuevo BYE al receptor
                                 my_socket = socket.socket(
                                     socket.AF_INET, socket.SOCK_DGRAM)
                                 my_socket.setsockopt(
@@ -224,16 +258,16 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                     socket.SO_REUSEADDR, 1)
                                 my_socket.connect((ip_receptor,
                                     port_receptor))
-                                my_socket.send(line)
+                                my_socket.send(new_bye)
                                 log.sent_to(ip_receptor, port_receptor,
-                                    line)
+                                    new_bye)
 
                         if find_recep is False:
                             respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
                             self.wfile.write(respuesta)
                             log.sent_to(ip_emisor, port_emisor, respuesta)
                         else:
-                            #Esperamos la respuesta del servidor
+                            #Esperamos el 200 OK del servidor
                             try:
                                 data = my_socket.recv(1024)
                             except socket.error:
@@ -241,12 +275,20 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                     + ip_receptor + ' port ' \
                                     + str(port_receptor)
                                 log.error(error)
+                                respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
+                                self.wfile.write(respuesta)
+                                log.sent_to(ip_emisor, port_emisor, respuesta)
                                 break
                             log.recv_from(ip_receptor, port_receptor, data)
 
+                            #Introducimos cabecera proxy
+                            cab_pr = self.cabecera_proxy()
+                            ok = data.split('\r\n\r\n')[0] + '\r\n'
+                            new_ok = ok + cab_pr + '\r\n'
+
                             #Reenviamos el asentimiento al emisor
-                            self.wfile.write(data)
-                            log.sent_to(ip_emisor, port_emisor, data)
+                            self.wfile.write(new_ok)
+                            log.sent_to(ip_emisor, port_emisor, new_ok)
                             log.eventos('Finishing.')
 
                 else:
@@ -322,7 +364,8 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
         Función que crea la cabecera del proxy
         """
         num = random.random()
-        cabecera = 'Via: SIP/2.0/UDP ' + ip_pr + ':' + port_pr + ';' + 'branch=' + str(num) + '\r\n'
+        cabecera = 'Via: SIP/2.0/UDP ' + ip_pr + ':' + port_pr + ';' + \
+            'branch=' + str(num) + '\r\n'
         return cabecera
                   
 if __name__ == "__main__":
