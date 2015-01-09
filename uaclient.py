@@ -201,9 +201,9 @@ if __name__ == "__main__":
 
     #Si hay alguna IP o puerto incorrecto imprimimos error
     if c_ip_serv is False or c_port_serv is False or c_port_rtp is False \
-        or c_ip_pr is False or c_port_pr is False:
+            or c_ip_pr is False or c_port_pr is False:
         print 'Usage: python uaclient.py config method option'
-        raise SystemExit  
+        raise SystemExit
 
     log_ua = Log(path_log)
 
