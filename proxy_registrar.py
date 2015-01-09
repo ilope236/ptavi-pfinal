@@ -254,11 +254,10 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 my_socket.setsockopt(
                                     socket.SOL_SOCKET,
                                     socket.SO_REUSEADDR, 1)
-                                my_socket.connect((ip_receptor,
-                                    port_receptor))
+                                my_socket.connect((ip_receptor, port_receptor))
                                 my_socket.send(new_bye)
-                                log.sent_to(ip_receptor, port_receptor,
-                                    new_bye)
+                                log.sent_to(
+                                    ip_receptor, port_receptor, new_bye)
 
                         if find_recep is False:
                             respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
@@ -273,9 +272,9 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                     + ip_receptor + ' port ' \
                                     + str(port_receptor)
                                 log.error(error)
-                                respuesta = 'SIP/2.0 404 User Not Found\r\n\r\n'
-                                self.wfile.write(respuesta)
-                                log.sent_to(ip_emisor, port_emisor, respuesta)
+                                resp = 'SIP/2.0 404 User Not Found\r\n\r\n'
+                                self.wfile.write(resp)
+                                log.sent_to(ip_emisor, port_emisor, resp)
                                 break
                             log.recv_from(ip_receptor, port_receptor, data)
 
@@ -295,7 +294,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                     log.sent_to(ip_emisor, port_emisor, respuesta)
 
             print "DICCIONARIO CLIENTES:", dic_clients, '\r\n\r\n'
- 
+
     def register2file(self):
         """
         Registramos a los clientes en un fichero:
@@ -321,8 +320,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
             hora = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))
             if expires <= hora:
                 del dic_clients[key]
-                print "Borramos a :" + key    
-
+                print "Borramos a :" + key
 
     def check_sdp(self, dic_sdp):
         """
@@ -331,7 +329,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
         #Están todos los campos (v, o, s, t, m) y son correctos?
         campos_sdp = False
         if 'v' in dic_sdp.keys() and dic_sdp['v'] == '0':
-            if 't' in dic_sdp.keys() and dic_sdp['t'] =='0':
+            if 't' in dic_sdp.keys() and dic_sdp['t'] == '0':
                 #s puede ser cualquier nombre pero no estar vacío
                 if 's' in dic_sdp.keys() and len(dic_sdp['s']) != 0:
                     if 'o' in dic_sdp.keys():
@@ -342,20 +340,19 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             ip = datos_o[1]
                             #Comprobamos que la IP es válida
                             check_ip = uaclient.check_ip(ip)
-                            if check_ip:
-                                if 'm' in dic_sdp.keys():
-                                    datos_m = dic_sdp['m'].split()
-                                    #Comprobamos que hay 3 campos
-                                    if len(datos_m) == 3:
-                                        audio = datos_m[0]
-                                        port = datos_m[1]
-                                        rtp = datos_m[2]
-                                        #El puerto de rtp es correcto?
-                                        check_port = uaclient.check_port(port)
-                                        if check_port and audio == 'audio' \
-                                            and rtp == 'RTP':
+                            if check_ip and 'm' in dic_sdp.keys():
+                                datos_m = dic_sdp['m'].split()
+                                #Comprobamos que hay 3 campos
+                                if len(datos_m) == 3:
+                                    audio = datos_m[0]
+                                    port = datos_m[1]
+                                    rtp = datos_m[2]
+                                    #El puerto de rtp es correcto?
+                                    check_port = uaclient.check_port(port)
+                                    if check_port:
+                                        if audio == 'audio' and rtp == 'RTP':
                                             campos_sdp = True
-        return campos_sdp 
+        return campos_sdp
 
     def cabecera_proxy(self):
         """
@@ -367,7 +364,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
         return cabecera
 
 
-def reestab_usuarios (data_path, dic_clients):
+def reestab_usuarios(data_path, dic_clients):
         """
         Reestablecemos usuarios que ya estaban registrados
         """
@@ -375,23 +372,23 @@ def reestab_usuarios (data_path, dic_clients):
         usuarios = fich.readlines()
         #Quitamos la primera línea que no contiene usuarios
         usuarios = usuarios[1:]
-        
+
         for usuario in usuarios:
             datos = usuario.split('\t')
             user = datos[0]
             ip = datos[1]
             port = datos[2]
             date = datos[3]
-            expires = datos[4][:-1] #Quitamos \n
+            #Quitamos \n del expires
+            expires = datos[4][:-1]
             print "Guardamos user:" + user + " IP:" + ip + ' Port:' \
                 + str(port) + ' Date:' + str(date) + ' Exp:' + str(expires) \
                 + '\n'
             dic_clients[user] = [ip, port, date, expires]
-        
+
         print "DICCIONARIO CLIENTES:", dic_clients, '\r\n\r\n'
-            
-    
-                  
+
+
 if __name__ == "__main__":
 
     #Comprobamos errores en los datos
@@ -421,7 +418,7 @@ if __name__ == "__main__":
                 ip_pr = "127.0.0.1"
             c_ip_pr = uaclient.check_ip(ip_pr)
             port_pr = dicc['puerto']
-            c_port_pr =uaclient.check_port(port_pr)
+            c_port_pr = uaclient.check_port(port_pr)
         elif dicc['tag'] == 'database':
             data_path = dicc['path']
             passwdpath = dicc['passwdpath']
