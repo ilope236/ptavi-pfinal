@@ -271,11 +271,15 @@ if __name__ == "__main__":
                     dic_sdp[key] = parametro.split('=')[1]
 
                 ip_UA = dic_sdp['o'].split()[1]
-                port_UA = int(dic_sdp['m'].split()[1])
+                port_UA_rtp = int(dic_sdp['m'].split()[1])
                 #Enviamos RTP
                 os.system('chmod +x mp32rtp')
                 aEjecutar = './mp32rtp -i ' + ip_UA + ' -p ' \
-                    + str(port_UA) + ' < ' + path_audio
+                    + str(port_UA_rtp) + ' < ' + path_audio
+                aEjecutar_cvlc = 'cvlc rtp://@' + ip_UA + ':'\
+                    + str(port_UA_rtp) + ' 2> /dev/null'
+                print 'Vamos a ejecutar', aEjecutar_cvlc
+                os.system(aEjecutar_cvlc + '&')
                 print 'Vamos a ejecutar', aEjecutar
                 os.system(aEjecutar)
                 print 'Ha terminado la cancion\r\n'
