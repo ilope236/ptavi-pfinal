@@ -147,9 +147,9 @@ if __name__ == "__main__":
 
     #Si hay alguna IP o puerto incorrecto imprimimos error
     if c_ip_serv is False or c_port_serv is False or c_port_rtp is False \
-        or c_ip_pr is False or c_port_pr is False:
+            or c_ip_pr is False or c_port_pr is False:
         print 'Usage: python uaserver.py config'
-        raise SystemExit 
+        raise SystemExit
 
     # Creamos servidor de eco y escuchamos
     serv = SocketServer.UDPServer(("", int(port_server)), EchoHandler)
