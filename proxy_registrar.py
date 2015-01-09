@@ -46,7 +46,6 @@ class XMLHandlerPR(ContentHandler):
             #Guardamos en una lista los diccionarios de atributos
             self.lista_dic.append(dic_attrs)
 
-
     def get_tags(self):
             """
             Función con la que se obtiene la lista de diccionarios de atributos
@@ -140,7 +139,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                             self.wfile.write(respuesta)
                             log.sent_to(ip_emisor, port_emisor, respuesta)
                         else:
-                            #Buscamos si destinatario y emisor están 
+                            #Buscamos si destinatario y emisor están
                             #registrados
                             emisor = dic_sdp['o'].split()[0]
                             for client in dic_clients.keys():
@@ -197,7 +196,8 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
                                 cab_pr = self.cabecera_proxy()
                                 ok = new_data[2].split('\r\n')
                                 sdp = new_data[3]
-                                ok = ok[0] + '\r\n' + cab_pr + ok[1] + '\r\n\r\n'
+                                ok = ok[0] + '\r\n' + cab_pr + ok[1] \
+                                    + '\r\n\r\n'
                                 new_data = trying + ring + ok + sdp
 
                                 #Reenviamos el nuevo asentimiento al emisor
@@ -236,9 +236,7 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
 
                     elif metodo == 'BYE':
 
-                        #Buscamos si quien envía el BYE está en la conversación
-
-                        #Buscamos si el destinatario está registrado                                  
+                        #Buscamos si el destinatario está registrado
                         for client in dic_clients.keys():
                             if client == user:
                                 find_recep = True
@@ -367,6 +365,32 @@ class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
         cabecera = 'Via: SIP/2.0/UDP ' + ip_pr + ':' + port_pr + ';' + \
             'branch=' + str(num) + '\r\n'
         return cabecera
+
+
+def reestab_usuarios (data_path, dic_clients):
+        """
+        Reestablecemos usuarios que ya estaban registrados
+        """
+        fich = open(data_path, 'r')
+        usuarios = fich.readlines()
+        #Quitamos la primera línea que no contiene usuarios
+        usuarios = usuarios[1:]
+        
+        for usuario in usuarios:
+            datos = usuario.split('\t')
+            user = datos[0]
+            ip = datos[1]
+            port = datos[2]
+            date = datos[3]
+            expires = datos[4][:-1] #Quitamos \n
+            print "Guardamos user:" + user + " IP:" + ip + ' Port:' \
+                + str(port) + ' Date:' + str(date) + ' Exp:' + str(expires) \
+                + '\n'
+            dic_clients[user] = [ip, port, date, expires]
+        
+        print "DICCIONARIO CLIENTES:", dic_clients, '\r\n\r\n'
+            
+    
                   
 if __name__ == "__main__":
 
@@ -408,6 +432,9 @@ if __name__ == "__main__":
     if c_ip_pr is False or c_port_pr is False:
         print 'Usage: python proxy_registrar.py config'
         raise SystemExit
+
+    #Buscamos si ya había clientes registrados
+    reestab_usuarios(data_path, dic_clients)
 
     # Creamos servidor register y escuchamos
     serv = SocketServer.UDPServer(("", int(port_pr)), SIPRegisterHandler)
