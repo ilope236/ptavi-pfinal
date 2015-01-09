@@ -1,4 +1,4 @@
-"Consistencia frente a valores erróneos"
-"Cabecera proxy"
-"Integración de (c)vlc"
-"Reestablecer usuarios conectados"
+Consistencia frente a valores erróneos
+Cabecera proxy
+Integración de (c)vlc
+Reestablecer usuarios conectados
